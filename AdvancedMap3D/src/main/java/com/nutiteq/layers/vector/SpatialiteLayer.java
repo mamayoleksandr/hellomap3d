@@ -6,6 +6,7 @@ import java.util.Vector;
 import android.graphics.Paint.Align;
 import android.graphics.Typeface;
 
+import com.nutiteq.components.Components;
 import com.nutiteq.components.Envelope;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.db.DBLayer;
@@ -13,6 +14,7 @@ import com.nutiteq.geometry.Geometry;
 import com.nutiteq.geometry.Line;
 import com.nutiteq.geometry.Point;
 import com.nutiteq.geometry.Polygon;
+import com.nutiteq.layers.Layer;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.Projection;
 import com.nutiteq.style.LabelStyle;
@@ -46,6 +48,8 @@ public class SpatialiteLayer extends GeometryLayer {
     private String[] userColumns;
     private int screenWidth;
     private String filter;
+    private String customSql;
+    private boolean dataLoaded;
 
     
     /**
@@ -137,14 +141,15 @@ public class SpatialiteLayer extends GeometryLayer {
             minZoom = polygonStyleSet.getFirstNonNullZoomStyleZoom();
         }
         
-
-        Map<String, DBLayer> dbLayers = spatialLite.qrySpatialLayerMetadata();
-        for (String layerKey : dbLayers.keySet()) {
-            DBLayer layer = dbLayers.get(layerKey);
-            if (layer.table.compareTo(tableName) == 0
-                    && layer.geomColumn.compareTo(geomColumnName) == 0) {
-                this.dbLayer = layer;
-                break;
+        if (tableName != null && geomColumnName != null){
+            Map<String, DBLayer> dbLayers = spatialLite.qrySpatialLayerMetadata();
+            for (String layerKey : dbLayers.keySet()) {
+                DBLayer layer = dbLayers.get(layerKey);
+                if (layer.table.compareTo(tableName) == 0
+                        && layer.geomColumn.compareTo(geomColumnName) == 0) {
+                    this.dbLayer = layer;
+                    break;
+                }
             }
         }
 
@@ -161,7 +166,7 @@ public class SpatialiteLayer extends GeometryLayer {
 
         
         // fix/add SDK SRID definition for conversions
-       spatialLite.defineEPSG3857();
+       //spatialLite.defineEPSG3857();
         
     }
     
@@ -177,16 +182,21 @@ public class SpatialiteLayer extends GeometryLayer {
 
     @Override
     public void calculateVisibleElements(Envelope envelope, int zoom) {
-        if (dbLayer == null) {
-            return;
-        }
-
+//        if (dbLayer == null) {
+//            return;
+//        }
+        
         if (zoom < minZoom) {
             setVisibleElementsList(null);
             return;
         }
-
-        executeVisibilityCalculationTask(new LoadDataTask(envelope,zoom));
+        
+        if(customSql != null && dataLoaded){
+            Log.debug("customSql data already loaded, skip new loading");
+        }else{
+            executeVisibilityCalculationTask(new LoadDataTask(envelope,zoom));
+            dataLoaded = true;
+        }
 
     }
 
@@ -202,6 +212,10 @@ public class SpatialiteLayer extends GeometryLayer {
     public void setAutoSimplify(int autoSimplifyPixels, int screenWidth) {
         this.autoSimplifyPixels = autoSimplifyPixels;
         this.screenWidth = screenWidth;
+    }
+    
+    public void setCustomSql(String sql){
+        this.customSql = sql;
     }
 
     
@@ -237,7 +251,7 @@ public class SpatialiteLayer extends GeometryLayer {
         Vector<Geometry> objectTemp = spatialLite
                 .qrySpatiaLiteGeom(new Envelope(bottomLeft.x, topRight.x,
                         bottomLeft.y, topRight.y), maxObjects, dbLayer,
-                        userColumns, filter, autoSimplifyPixels, screenWidth);
+                        userColumns, filter, customSql, autoSimplifyPixels, screenWidth);
 
         Vector<Geometry> objects = new Vector<Geometry>();
         // apply styles, create new objects for these
@@ -286,8 +300,21 @@ public class SpatialiteLayer extends GeometryLayer {
             objects.add(newObject);
         }
 
-        Log.debug("added verteces: "+numVert);
+        Log.debug("added objects: "+objects.size()+", verteces: "+numVert);
         setVisibleElementsList(objects);
+        
+        // send objects to SpatialiteTextLayer, so they will be updated
+        Components components = getComponents();
+        if (components != null) {
+          for (Layer layer : components.layers.getVectorLayers()) {
+            if (layer instanceof SpatialiteTextLayer) {
+                SpatialiteTextLayer textLayer = (SpatialiteTextLayer) layer;
+              if (textLayer.getBaseLayer() == SpatialiteLayer.this) {
+                  textLayer.calculateVisibleElements(objects, zoom);
+              }
+            }
+          }
+        }
         
     }
 }

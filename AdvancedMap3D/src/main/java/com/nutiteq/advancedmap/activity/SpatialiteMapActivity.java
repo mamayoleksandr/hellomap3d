@@ -14,30 +14,36 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.EditText;
 import android.widget.ZoomControls;
 
 import com.nutiteq.MapView;
 import com.nutiteq.advancedmap.R;
-import com.nutiteq.advancedmap.R.drawable;
-import com.nutiteq.advancedmap.R.id;
-import com.nutiteq.advancedmap.R.layout;
 import com.nutiteq.components.Components;
 import com.nutiteq.components.Envelope;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.components.Options;
 import com.nutiteq.db.DBLayer;
 import com.nutiteq.filepicker.FilePickerActivity;
+import com.nutiteq.geometry.Geometry;
+import com.nutiteq.geometry.Point;
 import com.nutiteq.layers.raster.TMSMapLayer;
+//import com.nutiteq.layers.vector.GeoPackageDbHelper2;
 import com.nutiteq.layers.vector.SpatialLiteDbHelper;
 import com.nutiteq.layers.vector.SpatialiteLayer;
+import com.nutiteq.layers.vector.SpatialiteTextLayer;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.EPSG3857;
 import com.nutiteq.style.LineStyle;
 import com.nutiteq.style.PointStyle;
 import com.nutiteq.style.PolygonStyle;
 import com.nutiteq.style.StyleSet;
+import com.nutiteq.style.TextStyle;
 import com.nutiteq.utils.UnscaledBitmapLoader;
 
 /**
@@ -60,17 +66,25 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
 
 	private static final int DIALOG_TABLE_LIST = 1;
     private static final int DIALOG_NO_TABLES = 2;
+    private static final int DIALOG_ADD_SQL_LAYER=3;
+    private static final String DEFAULT_SQL = "select rowid, HEX(AsBinary(transform(geometry,3857))) from ln_highway where name like 'Tallinn - Tartu%'";
     private MapView mapView;
     private String[] tableList = new String[1];
     private EPSG3857 proj;
     private SpatialLiteDbHelper spatialLite;
     private Map<String, DBLayer> dbMetaData;
+    private float dpi;
 
     
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		// calculate dpi for future use
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        dpi = metrics.density;
+		
 		// spinner in status bar, for progress indication
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 
@@ -210,7 +224,22 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
 
     @Override
     protected Dialog onCreateDialog(int id) {
+        final View view = getLayoutInflater().inflate(R.layout.dialog_sql, null);
         switch(id){
+        case DIALOG_ADD_SQL_LAYER:
+            return new AlertDialog.Builder(this)
+            .setTitle("SQL:")
+            .setView(view)
+            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    dialog.dismiss();
+                    EditText editField = (EditText)view.findViewById(R.id.sql);
+                    String sql = editField.getText().toString();
+                    Log.debug("entered sql: "+sql);
+                    addSpatiaLiteTable(0,sql, Color.RED);
+                }
+            }).create();
+
         case DIALOG_TABLE_LIST:
             return new AlertDialog.Builder(this)
             .setTitle("Select table:")
@@ -220,7 +249,7 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
                     dialog.dismiss();
                     int selectedPosition = ((AlertDialog) dialog)
                             .getListView().getCheckedItemPosition();
-                    addSpatiaLiteTable(selectedPosition);
+                    addSpatiaLiteTable(selectedPosition, null, Color.BLUE);
                 }
             }).create();
             
@@ -238,11 +267,15 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
         return null;
     }
     
-	public void addSpatiaLiteTable(int selectedPosition){
+	protected void addSqlLayer(String sql) {
+        
+        
+    }
+
+    public void addSpatiaLiteTable(int selectedPosition, String customSql, int color){
 	    
 	    // some general constants
         int minZoom = 0;
-        int color = Color.BLUE;
         int maxElements = 1000;
         
         // set styles for all 3 object types: point, line and polygon
@@ -267,37 +300,109 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
                 null);
         polygonStyleSet.setZoomStyle(minZoom, polygonStyle);
 	    
-	    String[] tableKey = tableList[selectedPosition].split("\\.");
+        String geoColumn;
+        String table;
+        String[] tableKey = tableList[selectedPosition].split("\\.");
+        table = tableKey[0];
+        geoColumn = tableKey[1];
 	    
-        SpatialiteLayer spatialiteLayer = new SpatialiteLayer(proj, spatialLite, tableKey[0],
-                tableKey[1], null, maxElements, pointStyleSet, lineStyleSet, polygonStyleSet);
+        SpatialiteLayer spatialiteLayer = new SpatialiteLayer(proj, spatialLite, table,
+                geoColumn, null, maxElements, pointStyleSet, lineStyleSet, polygonStyleSet);
+        
+        if(customSql != null){
+            spatialiteLayer.setCustomSql(customSql);
+        }
         
 	    mapView.getLayers().addLayer(spatialiteLayer);
 
-        Envelope extent = spatialiteLayer.getDataExtent();
-        
-        DisplayMetrics metrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(metrics);   
-        int screenHeight = metrics.heightPixels;
-        int screenWidth = metrics.widthPixels;
+	    if(customSql == null){
+	        // skip for custom SQL, does not work
+	        
+	        // find extent of the layer, zoom to it
+	        Envelope extent = spatialiteLayer.getDataExtent();
+	        
+	        DisplayMetrics metrics = new DisplayMetrics();
+	        getWindowManager().getDefaultDisplay().getMetrics(metrics);   
+	        int screenHeight = metrics.heightPixels;
+	        int screenWidth = metrics.widthPixels;
 
-        double zoom = Math.log((screenWidth * (Math.PI * 6378137.0f * 2.0f)) 
-                / ((extent.maxX-extent.minX) * 256.0)) / Math.log(2);
-        
-        MapPos centerPoint = new MapPos((extent.maxX+extent.minX)/2,(extent.maxY+extent.minY)/2);
-        Log.debug("found extent "+extent+", zoom "+zoom+", centerPoint "+centerPoint);
+	        double zoom = Math.log((screenWidth * (Math.PI * 6378137.0f * 2.0f)) 
+	                / ((extent.maxX-extent.minX) * 256.0)) / Math.log(2);
+	        
+	        MapPos centerPoint = new MapPos((extent.maxX+extent.minX)/2,(extent.maxY+extent.minY)/2);
+	        Log.debug("found extent "+extent+", zoom "+zoom+", centerPoint "+centerPoint);
 
-        // define pixels and screen width for automatic polygon/line simplification
-        spatialiteLayer.setAutoSimplify(2,screenWidth);
+	        // define pixels and screen width for automatic polygon/line simplification
+	        spatialiteLayer.setAutoSimplify(2,screenWidth);
+	        
+	        mapView.setZoom((float) zoom);
+	        mapView.setFocusPoint(centerPoint); 
+	    }
+	    
+	    // add text layer for names
+	    SpatialiteTextLayer textLayer = new SpatialiteTextLayer(mapView.getLayers().getBaseLayer().getProjection(), spatialiteLayer) {
         
-        mapView.setZoom((float) zoom);
-        mapView.setFocusPoint(centerPoint); 
+	        // text styling is defined in this class implementation
+            private StyleSet<TextStyle> styleSetLines = new StyleSet<TextStyle>(
+                    TextStyle.builder().setAllowOverlap(false)
+                            .setOrientation(TextStyle.GROUND_ORIENTATION)
+                            .setAnchorY(TextStyle.CENTER)
+                            .setSize((int) (25 * dpi)).build());
+            
+            private StyleSet<TextStyle> styleSetPoints = new StyleSet<TextStyle>(
+                    TextStyle
+                            .builder()
+                            .setAllowOverlap(false)
+                            .setOrientation(TextStyle.CAMERA_BILLBOARD_ORIENTATION)
+                            .setSize((int) (30 * dpi))
+                            .setColor(Color.argb(255, 100, 100, 100))
+                            .setPlacementPriority(5).build());
+
+            @Override
+            protected StyleSet<TextStyle> createStyleSet(Geometry feature,
+                    int zoom) {
+                if (feature instanceof Point) {
+                    return styleSetPoints;
+                }
+                return styleSetLines;
+            }
+
+        };
+        
+        // 2. set properties for texts
+        textLayer.setZOrdered(false);
+        textLayer.setMaxVisibleElements(50);
+        
+        // 3. add layer
+        mapView.getLayers().addLayer(textLayer);
+	    
+	    
 	}
 	
     public MapView getMapView() {
         return mapView;
     }
 
+    
+    @Override
+    public boolean onCreateOptionsMenu(final Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.spatialite, menu);
+        return true;
+    }
+    
+    @Override
+    public boolean onMenuItemSelected(final int featureId, final MenuItem item) {
+
+        switch (item.getItemId()) {
+
+        // map types
+        case R.id.sql:
+            showDialog(DIALOG_ADD_SQL_LAYER);
+        }
+        return false;
+    }
+    
     @Override
     public String getFileSelectMessage() {
         return "Select Spatialite database file (.spatialite, .db, .sqlite)";
@@ -315,7 +420,9 @@ public class SpatialiteMapActivity extends Activity implements FilePickerActivit
                         return true;
                     } else if (file.isFile()
                             && (file.getName().endsWith(".db")
-                                    || file.getName().endsWith(".sqlite") || file
+                                    || file.getName().endsWith(".sqlite")
+                                    || file.getName().endsWith(".geopackage")
+                                    || file
                                     .getName().endsWith(".spatialite"))) {
                         // accept files with given extension
                         return true;
