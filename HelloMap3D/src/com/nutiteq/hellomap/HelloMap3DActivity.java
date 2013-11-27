@@ -75,8 +75,9 @@ public class HelloMap3DActivity extends Activity {
 
         adjustMapDpi();
         
-//        mapView.getOptions().setFPSIndicator(true);
-//        mapView.getOptions().setRasterTaskPoolSize(4);
+        mapView.getOptions().setFPSIndicator(true);
+        mapView.getOptions().setRasterTaskPoolSize(4);
+        
         
         // set initial map view camera - optional. "World view" is default
         // Location: San Francisco 
@@ -92,24 +93,30 @@ public class HelloMap3DActivity extends Activity {
 
         // Activate some mapview options to make it smoother - optional
         mapView.getOptions().setPreloading(true);
-        mapView.getOptions().setSeamlessHorizontalPan(true);
+     //   mapView.getOptions().setSeamlessHorizontalPan(true);
         mapView.getOptions().setTileFading(true);
         mapView.getOptions().setKineticPanning(true);
         mapView.getOptions().setDoubleClickZoomIn(true);
         mapView.getOptions().setDualClickZoomOut(true);
 
         // set sky bitmap - optional, default - white
-        mapView.getOptions().setSkyDrawMode(Options.DRAW_BITMAP);
-        mapView.getOptions().setSkyOffset(4.86f);
-        mapView.getOptions().setSkyBitmap(
-                UnscaledBitmapLoader.decodeResource(getResources(),
-                        R.drawable.sky_small));
+//        mapView.getOptions().setSkyDrawMode(Options.DRAW_BITMAP);
+//        mapView.getOptions().setSkyOffset(4.86f);
+//        mapView.getOptions().setSkyBitmap(
+//                UnscaledBitmapLoader.decodeResource(getResources(),
+//                        R.drawable.sky_small));
 
         // Map background, visible if no map tiles loaded - optional, default - white
-        mapView.getOptions().setBackgroundPlaneDrawMode(Options.DRAW_BITMAP);
-        mapView.getOptions().setBackgroundPlaneBitmap(
-                UnscaledBitmapLoader.decodeResource(getResources(),
-                        R.drawable.background_plane));
+//        mapView.getOptions().setBackgroundPlaneDrawMode(Options.DRAW_BITMAP);
+//        mapView.getOptions().setBackgroundPlaneBitmap(
+//                UnscaledBitmapLoader.decodeResource(getResources(),
+//                        R.drawable.background_plane));
+
+        // options for globe view
+        mapView.getOptions().setRenderProjection(Options.SPHERICAL_RENDERPROJECTION);
+
+        mapView.getOptions().setBackgroundImageDrawMode(Options.DRAW_COLOR);
+        mapView.getOptions().setBackgroundPlaneColor(Color.BLUE);
         mapView.getOptions().setClearColor(Color.WHITE);
         
         // configure texture caching - optional, suggested 
@@ -190,7 +197,7 @@ public class HelloMap3DActivity extends Activity {
                      
                      // recenter automatically to GPS point
                      // TODO in real app it can be annoying this way, add extra control that it is done only once
-                     mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(location.getLongitude(), location.getLatitude()));
+             //        mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(location.getLongitude(), location.getLatitude()));
                  }
             }
 
