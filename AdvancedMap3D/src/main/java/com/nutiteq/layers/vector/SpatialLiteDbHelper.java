@@ -32,6 +32,7 @@ import com.nutiteq.utils.WktWriter;
  * 
  */
 public class SpatialLiteDbHelper {
+    public static final String OID = "_id";
     private static final int DEFAULT_SRID = 4326;
     private static final int SDK_SRID = 3857;
 
@@ -212,7 +213,7 @@ public class SpatialLiteDbHelper {
     }    
     
     public Vector<Geometry> qrySpatiaLiteGeom(final Envelope bbox,
-            final int limit, final DBLayer dbLayer, final String[] userColumns, String filter, int autoSimplifyPixels, int screenWidth) {
+            final int limit, final DBLayer dbLayer, final String[] userColumns, String filter, String customSql, int autoSimplifyPixels, int screenWidth) {
         
         final Vector<Geometry> geoms = new Vector<Geometry>();
         final long start = System.currentTimeMillis();
@@ -233,13 +234,15 @@ public class SpatialLiteDbHelper {
 
                 // Column values to userData Map
                 final Map<String, String> userData = new HashMap<String, String>();
-                for (int i = 2; i < rowdata.length; i++) {
-                    userData.put(userColumns[i - 2], rowdata[i]);
+                if(userColumns != null && userColumns.length > 0){
+                    for (int i = 2; i < rowdata.length; i++) {
+                        userData.put(userColumns[i - 2], rowdata[i]);
+                    }
                 }
 
                 // First column is always row id
                 
-                userData.put("_id", rowdata[0]);
+                userData.put(OID, rowdata[0]);
                 
                 // second column is geometry
                 Geometry[] g1 = WkbRead.readWkb(
@@ -253,67 +256,73 @@ public class SpatialLiteDbHelper {
             }
         };
 
-        String userColumn = "";
-        if (userColumns != null && userColumns.length > 0) {
-            userColumn = ", "
-                    + Arrays.asList(userColumns).toString()
-                            .replaceAll("^\\[|\\]$", "");
-        }
-
-        String geomCol = dbLayer.geomColumn;
-        Envelope queryBbox;
-
-        if (dbLayer.srid != SDK_SRID) {
-            Log.debug("SpatialLite: Data must be transformed from " + SDK_SRID
-                    + " to " + dbLayer.srid);
-            geomCol = "Transform(" + dbLayer.geomColumn + "," + SDK_SRID + ")";
-
-            Log.debug("original bbox :" + bbox);
-
-            queryBbox = GeoUtils.transformBboxJavaProj(bbox, sdk_proj4text,
-                    dbLayer.proj4txt.replace("longlat", "latlong"));
-
-            Log.debug("converted to Layer SRID:" + queryBbox);
-        } else {
-            queryBbox = bbox;
-        }
-        
-        // simplify geometries
-        if(autoSimplifyPixels > 0){
-            double zoomRange = bbox.maxX-bbox.minX; // map width in mercator meters
-            double width = 1000; // roughly 1000 pixels screen
-
-            // find size of N (=3) pixels.
-            // given in mercator meters, used for Douglas-Peucker tolerance
-            
-            double dpTolerance = ((zoomRange / width) * (double)autoSimplifyPixels);
-
-            // SimplifyPreserveTopology() is about 2x slower, but works a bit better (accepts invalid geometries)
-            geomCol = "Simplify("+geomCol+","+dpTolerance+")";
-        }
-
-
-        String noIndexWhere = "MBRIntersects(BuildMBR(" + queryBbox.getMinX()
-                + "," + queryBbox.getMinY() + "," + queryBbox.getMaxX() + ","
-                + queryBbox.getMaxY() + ")," + dbLayer.geomColumn + ")";
-
-        String filterSql = (filter == null) ? "" : filter + " AND ";
-        
         String qry;
-        if (!dbLayer.spatialIndex) {
-            qry = "SELECT rowid, HEX(AsBinary(" + geomCol + ")) " + userColumn
-                    + " FROM \"" + dbLayer.table + "\" WHERE " + filterSql + noIndexWhere
-                    + " LIMIT " + limit + ";";
-        } else {
-            qry = "SELECT rowid, HEX(AsBinary(" + geomCol + ")) " + userColumn
-                    + " FROM \"" + dbLayer.table
-                    + "\" WHERE " + filterSql + " ROWID IN (select pkid from idx_"
-                    + dbLayer.table + "_" + dbLayer.geomColumn
-                    + " where pkid MATCH RtreeIntersects("
-                    + +queryBbox.getMinX() + "," + queryBbox.getMinY() + ","
-                    + queryBbox.getMaxX() + "," + queryBbox.getMaxY()
-                    + ")) LIMIT " + limit;
-        }
+        if(customSql == null){
+            String userColumn = "";
+            if (userColumns != null && userColumns.length > 0) {
+                userColumn = ", "
+                        + Arrays.asList(userColumns).toString()
+                                .replaceAll("^\\[|\\]$", "");
+            }
+
+            String geomCol = dbLayer.geomColumn;
+            Envelope queryBbox;
+
+            if (dbLayer.srid != SDK_SRID) {
+                Log.debug("SpatialLite: Data must be transformed from " + SDK_SRID
+                        + " to " + dbLayer.srid);
+                geomCol = "Transform(" + dbLayer.geomColumn + "," + SDK_SRID + ")";
+
+                Log.debug("original bbox :" + bbox);
+
+                queryBbox = GeoUtils.transformBboxJavaProj(bbox, sdk_proj4text,
+                        dbLayer.proj4txt.replace("longlat", "latlong"));
+
+                Log.debug("converted to Layer SRID:" + queryBbox);
+            } else {
+                queryBbox = bbox;
+            }
+            
+            // simplify geometries
+            if(autoSimplifyPixels > 0){
+                double zoomRange = bbox.maxX-bbox.minX; // map width in mercator meters
+                double width = 1000; // roughly 1000 pixels screen
+
+                // find size of N (=3) pixels.
+                // given in mercator meters, used for Douglas-Peucker tolerance
+                
+                double dpTolerance = ((zoomRange / width) * (double)autoSimplifyPixels);
+
+                // SimplifyPreserveTopology() is about 2x slower, but works a bit better (accepts invalid geometries)
+                geomCol = "Simplify("+geomCol+","+dpTolerance+")";
+            }
+
+
+            String noIndexWhere = "MBRIntersects(BuildMBR(" + queryBbox.getMinX()
+                    + "," + queryBbox.getMinY() + "," + queryBbox.getMaxX() + ","
+                    + queryBbox.getMaxY() + ")," + dbLayer.geomColumn + ")";
+
+            String filterSql = (filter == null) ? "" : filter + " AND ";
+            
+            if (!dbLayer.spatialIndex) {
+                qry = "SELECT rowid, HEX(AsBinary(" + geomCol + ")) " + userColumn
+                        + " FROM \"" + dbLayer.table + "\" WHERE " + filterSql + noIndexWhere
+                        + " LIMIT " + limit + ";";
+            } else {
+                qry = "SELECT rowid, HEX(AsBinary(" + geomCol + ")) " + userColumn
+                        + " FROM \"" + dbLayer.table
+                        + "\" WHERE " + filterSql + " ROWID IN (select pkid from idx_"
+                        + dbLayer.table + "_" + dbLayer.geomColumn
+                        + " where pkid MATCH RtreeIntersects("
+                        + +queryBbox.getMinX() + "," + queryBbox.getMinY() + ","
+                        + queryBbox.getMaxX() + "," + queryBbox.getMaxY()
+                        + ")) LIMIT " + limit;
+            }
+        }else{
+            // ignore all above, just use directly whatever was given
+            qry = customSql;
+        }   
+
 
         Log.debug(qry);
         try {
@@ -544,6 +553,6 @@ public class SpatialLiteDbHelper {
     public List<Geometry> qrySpatiaLiteGeom(Envelope envelope, int maxObjects,
             DBLayer dbLayer, String[] strings, int i, int j) {
         return qrySpatiaLiteGeom(envelope, maxObjects,
-                 dbLayer, strings, null, i, j);
+                 dbLayer, strings, null, null, i, j);
     }
 }
