@@ -196,7 +196,7 @@ LOCAL_MODULE    := spatialite
 LOCAL_CFLAGS    := -D__ANDROID__ -Dfdatasync=fsync \
 	-DSQLITE_ENABLE_RTREE -DOMIT_FREEXL \
 	-DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS
-LOCAL_LDLIBS	:= -llog 
+#LOCAL_LDLIBS	:= -llog 
 LOCAL_C_INCLUDES := \
     libiconv-1.13.1/include \
     libiconv-1.13.1/libcharset/include \
@@ -340,7 +340,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := geos
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/geos-3.3.8/include
 LOCAL_CFLAGS := $(LOCAL_C_INCLUDES:%=-I%) -D__ANDROID__ -DHAVE_LONG_LONG_INT_64
-LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -ldl -lz
+#LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -ldl -lz
 LOCAL_STL                 := gnustl_static
 LOCAL_CPPFLAGS            += -fexceptions
 LOCAL_CPPFLAGS            += -frtti
@@ -615,3 +615,39 @@ LOCAL_SRC_FILES := \
 	geos-3.3.8/src/util/Profiler.cpp \
 	geos-3.3.8/src/util/math.cpp 
 include $(BUILD_STATIC_LIBRARY)
+
+# build GDAL/OGR (including OSR and JNI wrappers) from precompiled binary
+include $(CLEAR_VARS)
+LOCAL_MODULE := gdal
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/gdal/include
+LOCAL_SRC_FILES := gdal/lib/$(TARGET_ARCH_ABI)/libgdal.a
+LOCAL_EXPORT_LDLIBS := -lz
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := gdaljni
+LOCAL_SRC_FILES := gdal/jni/gdal_wrap.cpp
+LOCAL_STATIC_LIBRARIES := gdal
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := gdalconstjni
+LOCAL_SRC_FILES := gdal/jni/gdalconst_wrap.c
+LOCAL_STATIC_LIBRARIES := gdal
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := ogrjni
+LOCAL_SRC_FILES := gdal/jni/ogr_wrap.cpp
+LOCAL_CFLAGS	:= -DDEBUG=1
+LOCAL_LDLIBS := -lm
+LOCAL_LDLIBS += -llog 
+LOCAL_STATIC_LIBRARIES := gdal
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := osrjni
+LOCAL_SRC_FILES := gdal/jni/osr_wrap.cpp
+LOCAL_STATIC_LIBRARIES := gdal
+include $(BUILD_SHARED_LIBRARY)
+
