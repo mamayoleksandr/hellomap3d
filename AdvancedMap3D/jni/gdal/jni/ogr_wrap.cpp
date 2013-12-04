@@ -307,10 +307,6 @@ typedef void retGetPoints;
 
 static int bUseExceptions=1;
 
-
-
-
-
 void CPL_STDCALL 
 VeryQuietErrorHandler(CPLErr eclass, int code, const char *msg ) 
 {
@@ -384,8 +380,6 @@ JavaProgressProxy( double dfComplete, const char *pszMessage, void *pData )
 
 
 #if defined(SWIG_NOINCLUDE) || defined(SWIG_NOARRAYS)
-
-
 
 
 int SWIG_JavaArrayInBool (JNIEnv *jenv, jboolean **jarr, bool **carr, jbooleanArray input);
@@ -9830,30 +9824,6 @@ SWIGEXPORT jlong JNICALL Java_org_gdal_ogr_ogrJNI_TermProgressCallback_1SWIGUpca
     (void)jcls;
     *(ProgressCallback **)&baseptr = *(TermProgressCallback **)&jarg1;
     return baseptr;
-}
-
-//extern "C" void Java_com_test_yourApp_yourJavaClass_nativePipeSTDERRToLogcat(JNIEnv* env, jclass cls, jobject obj)
-// http://stackoverflow.com/questions/9192749/capturing-stdout-stderr-with-ndk
-#include <android/log.h>
-SWIGEXPORT void JNICALL Java_org_gdal_ogr_ogrJNI_nativePipeSTDERRToLogcat(JNIEnv* env, jclass cls, jobject obj)
-
-{
-    int errpipe[2];
-    int stdpipe[2];
-    pipe(errpipe);
-    pipe(stdpipe);
-    dup2(errpipe[1], STDERR_FILENO);
-    dup2(stdpipe[1], STDOUT_FILENO);
-    FILE *inputFile = fdopen(errpipe[0], "r");
-    FILE *inputFile2 = fdopen(stdpipe[0], "r");
-    char readBuffer[256];
-    while (1) {
-        fgets(readBuffer, sizeof(readBuffer), inputFile);
-        __android_log_write(ANDROID_LOG_INFO, "stderr", readBuffer);
-
-        fgets(readBuffer, sizeof(readBuffer), inputFile2);
-        __android_log_write(ANDROID_LOG_INFO, "stdout", readBuffer);
-    }
 }
 
 #ifdef __cplusplus

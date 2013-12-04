@@ -15554,14 +15554,10 @@ SWIGEXPORT void JNICALL Java_org_gdal_gdal_gdalJNI_ColorTable_1SetColorEntry(JNI
   arg2 = (int)jarg2; 
   {
     /* %typemap(in) (GDALColorEntry *) (GDALColorEntry tmp3) */
-    arg3 = NULL;
-    
     tmp3.c4 = (jarg3 >> 24) & 0xff;
     tmp3.c1 = (jarg3 >> 16) & 0xff;
     tmp3.c2 = (jarg3 >> 8) & 0xff;
     tmp3.c3 = (jarg3 >> 0) & 0xff;
-    printf( "  %d, %d, %d, %d\n",
-      tmp3.c1, tmp3.c2, tmp3.c3, tmp3.c4 );
     arg3 = &tmp3;
   }
   GDALColorTableShadow_SetColorEntry(arg1,arg2,(GDALColorEntry const *)arg3);
@@ -15584,27 +15580,19 @@ SWIGEXPORT void JNICALL Java_org_gdal_gdal_gdalJNI_ColorTable_1CreateColorRamp(J
   arg2 = (int)jarg2; 
   {
     /* %typemap(in) (GDALColorEntry *) (GDALColorEntry tmp3) */
-    arg3 = NULL;
-    
     tmp3.c4 = (jarg3 >> 24) & 0xff;
     tmp3.c1 = (jarg3 >> 16) & 0xff;
     tmp3.c2 = (jarg3 >> 8) & 0xff;
     tmp3.c3 = (jarg3 >> 0) & 0xff;
-    printf( "  %d, %d, %d, %d\n",
-      tmp3.c1, tmp3.c2, tmp3.c3, tmp3.c4 );
     arg3 = &tmp3;
   }
   arg4 = (int)jarg4; 
   {
     /* %typemap(in) (GDALColorEntry *) (GDALColorEntry tmp5) */
-    arg5 = NULL;
-    
     tmp5.c4 = (jarg5 >> 24) & 0xff;
     tmp5.c1 = (jarg5 >> 16) & 0xff;
     tmp5.c2 = (jarg5 >> 8) & 0xff;
     tmp5.c3 = (jarg5 >> 0) & 0xff;
-    printf( "  %d, %d, %d, %d\n",
-      tmp5.c1, tmp5.c2, tmp5.c3, tmp5.c4 );
     arg5 = &tmp5;
   }
   GDALColorTableShadow_CreateColorRamp(arg1,arg2,(GDALColorEntry const *)arg3,arg4,(GDALColorEntry const *)arg5);

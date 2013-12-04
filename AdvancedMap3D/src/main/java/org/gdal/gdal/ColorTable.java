@@ -9,7 +9,6 @@
 package org.gdal.gdal;
 //jeppesen swig patch
 
-
 public class ColorTable implements Cloneable {
   private long swigCPtr;
   protected boolean swigCMemOwn;
@@ -40,17 +39,15 @@ public class ColorTable implements Cloneable {
   }
 
   private Object parentReference;
-
+    
   /* Ensure that the GC doesn't collect any parent instance set from Java */
   protected void addReference(Object reference) {
     parentReference = reference;
   }
-
-  public Object clone()
-  {
-      return Clone();
+    
+  public Object clone() {
+    return Clone();
   }
-
 
 
   public ColorTable(int palette) {
@@ -75,8 +72,8 @@ public class ColorTable implements Cloneable {
   }
 
   public int GetColorEntry(int entry) {
-    return gdalJNI.ColorTable_GetColorEntry(swigCPtr, this, entry);
-  }
+  return gdalJNI.ColorTable_GetColorEntry(swigCPtr, this, entry);
+}
 
   public void SetColorEntry(int entry, int centry) {
     gdalJNI.ColorTable_SetColorEntry(swigCPtr, this, entry, centry);
