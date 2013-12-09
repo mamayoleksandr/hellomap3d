@@ -26,6 +26,8 @@ import com.nutiteq.ui.Label;
 import com.nutiteq.utils.UnscaledBitmapLoader;
 import com.nutiteq.vectorlayers.MarkerLayer;
 
+import java.util.List;
+
 /**
  * This is minimal example of Nutiteq 3D map app.
  * Also some useful extra configurations are added
@@ -211,9 +213,10 @@ public class HelloMap3DActivity extends Activity {
         };
         
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000, 100, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        List<String> providers = locationManager.getProviders(true);
+        for(String provider : providers){
+            locationManager.requestLocationUpdates(provider, 10000, 100, locationListener);
+        }
 
     }
     
