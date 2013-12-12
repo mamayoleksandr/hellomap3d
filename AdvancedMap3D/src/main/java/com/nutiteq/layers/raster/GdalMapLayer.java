@@ -179,12 +179,17 @@ public class GdalMapLayer extends RasterLayer {
         // get original bounds in Wgs84
         SpatialReference hLatLong = new SpatialReference(osr.SRS_WKT_WGS84);
         double[][] originalBounds = boundsWgs84(originalData, hLatLong);
-        
+        SpatialReference fromProj = new SpatialReference(originalData.GetProjectionRef());
+
         if(reproject){
             // on the fly reprojection - slower reading, but fast open and less memory
 //            openData = gdal.AutoCreateWarpedVRT(originalData, osr.SRS_WKT_WGS84, layerProjection.ExportToWkt(),VRT_RESAMPLER, VRT_MAXERROR);
             openData = gdal.AutoCreateWarpedVRT(originalData, null, layerProjection.ExportToWkt(),VRT_RESAMPLER, VRT_MAXERROR);
 
+            if(openData == null){
+                Log.error("gdal.AutoCreateWarpedVRT result is null");
+                return null;
+            }
             fullGdalInfo(openData);
             originalData.delete();
             
@@ -206,8 +211,10 @@ public class GdalMapLayer extends RasterLayer {
     // Opens GDAL file, gets dataset pointer
     private Dataset openGdalFile(String gdalSource, boolean reproject) {
         Dataset originalData = gdal.Open(gdalSource, gdalconstConstants.GA_ReadOnly);
-        if (originalData == null)
+        if (originalData == null){
+            Log.error("could not open gdalSource " + gdalSource);
             return null;
+        }
         Dataset openData = null;
         
         // get original bounds
@@ -456,6 +463,11 @@ public class GdalMapLayer extends RasterLayer {
                     Vector papszExtraMDDomains = new Vector();
 
         
+        if(data == null){
+            Log.error("fullGdalInfo data = null, no info");
+            return;
+        }
+                    
         /* -------------------------------------------------------------------- */
         /*      Report general info.                                            */
         /* -------------------------------------------------------------------- */
