@@ -49,6 +49,7 @@ import com.nutiteq.vectorlayers.VectorLayer;
  */
 public class OgrHelper {
 
+    public static final String TABLE_SEPARATOR = " |";
     private Layer layer;
     private boolean transformNeeded;
     private Projection projection;
@@ -96,7 +97,14 @@ public class OgrHelper {
             throw new IOException("OgrLayer: unable to open dataset '"+fileName+"'");
         }
         
-        // open the layer
+        // debug print all layer data 
+        for (int i=0; i < hDataset.GetLayerCount(); i++){
+            Layer layerI = hDataset.GetLayer(i);
+            Log.debug("---");
+            printLayerDetails(layerI);
+        }
+        
+        // open the layer, just pick the first one if name not given
         if (tableName == null) {
             layer = hDataset.GetLayer(0);
             tableName = layer.GetName();
@@ -111,9 +119,9 @@ public class OgrHelper {
             return;
         }
         
-        printLayerDetails();
+        Log.info("opening layer: "+layer.GetName());
         
-        this.fieldNames = getFieldNames();
+        this.fieldNames = getFieldNames(layer);
         
         initProjections();
     }
@@ -163,7 +171,8 @@ public class OgrHelper {
             userData.put("FID",String.valueOf(feature.GetFID()));
             
             for(int field=0; field<feature.GetFieldCount();field++){
-                userData.put(this.fieldNames[field], feature.GetFieldAsString(field));
+                userData.put(this.fieldNames[field],
+                        feature.GetFieldAsString(field));
             }
             
             Label label = createLabel(userData);
@@ -195,10 +204,13 @@ public class OgrHelper {
                     }
                     
                 }
-                
-                newObject.attachToLayer(vectorLayer);
-                newObject.setActiveStyle(zoom);
-                newVisibleElementsList.add(newObject);
+                if(newObject != null){
+                    newObject.attachToLayer(vectorLayer);
+                    newObject.setActiveStyle(zoom);
+                    newVisibleElementsList.add(newObject);
+                }else{
+                    Log.warning("Loaded geometry is null, probably invalid data");
+                }
                 
             }
 
@@ -296,7 +308,7 @@ public class OgrHelper {
         return new MapPos(transPoint[0], transPoint[1]);
     }
     
-    private String[] getFieldNames() {
+    private String[] getFieldNames(Layer layer) {
 
         FeatureDefn poDefn = layer.GetLayerDefn();
         
@@ -310,7 +322,7 @@ public class OgrHelper {
     }
     
     // print layer details for troubleshooting. Code from ogrinfo.java
-    public void printLayerDetails() {
+    public void printLayerDetails(Layer layer) {
 
         FeatureDefn poDefn = layer.GetLayerDefn();
         Log.debug("Layer name: " + poDefn.GetName());
@@ -453,6 +465,21 @@ public class OgrHelper {
             return "POLYGON";
         }
         return null;
+    }
+
+    public String[] getTableList() {
+        Vector<String> tables = new Vector<String>();
+        // debug print all layer data 
+        for (int i=0; i < hDataset.GetLayerCount(); i++){
+            Layer layerI = hDataset.GetLayer(i);
+            tables.add(layerI.GetName() + TABLE_SEPARATOR + layerI.GetFeatureCount()+" "+ogr.GeometryTypeToName(layerI.GetGeomType()));
+        }
+        return tables.toArray(new String[tables.size()]);
+    }
+
+    public void setTable(String tableName) {
+        this.layer = hDataset.GetLayerByName(tableName);
+        this.fieldNames = getFieldNames(layer);
     }
     
     

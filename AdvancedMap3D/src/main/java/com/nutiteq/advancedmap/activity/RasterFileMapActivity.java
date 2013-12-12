@@ -88,15 +88,12 @@ public class RasterFileMapActivity extends Activity implements FilePickerActivit
         
         try {
             GdalMapLayer gdalLayer = new GdalMapLayer(new EPSG3857(), 0, 18, 9, file, mapView, true);
-            gdalLayer.setShowAlways(true);
             mapView.getLayers().addLayer(gdalLayer);
-            Map<Envelope, GdalDatasetInfo> dataSets = gdalLayer.getDatasets();
-            if(!dataSets.isEmpty()){
-                GdalDatasetInfo firstDataSet = (GdalDatasetInfo) dataSets.values().toArray()[0];
 
+            GdalDatasetInfo firstDataSet = gdalLayer.getOpenDataSetData();
+            if(firstDataSet != null && firstDataSet.envelope != null){
                 MapPos centerPoint = new MapPos((firstDataSet.envelope.maxX+firstDataSet.envelope.minX)/2,
                         (firstDataSet.envelope.maxY+firstDataSet.envelope.minY)/2);
-                
                 
                 Log.debug("found extent "+firstDataSet.envelope+", zoom "+firstDataSet.bestZoom+", centerPoint "+centerPoint);
                 

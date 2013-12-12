@@ -56,7 +56,10 @@ public class WkbRead {
 
 		@Override
 		public Line createLine(List<MapPos> points, int srid) {
-			return new Line(points, null, (LineStyle) null, userData);
+		    if(points != null)
+		        return new Line(points, null, (LineStyle) null, userData);
+		    else
+		        return null;
 		}
 		
 		@Override
@@ -225,12 +228,14 @@ public class WkbRead {
 			for (int i = 1; i < numRings; i++){
 				int innerSize = readInt(is, endian);
 				List<MapPos> innerRing = readCoordinateList(is, dimensions, innerSize, endian);
-				if (innerRing.size() > 1) {
-					if (innerRing.get(0).equals(innerRing.get(innerRing.size() - 1))) {
-						innerRing.remove(0);
-					}
+				if(innerRing != null){
+	                if (innerRing.size() > 1) {
+	                    if (innerRing.get(0).equals(innerRing.get(innerRing.size() - 1))) {
+	                        innerRing.remove(0);
+	                    }
+	                }
+	                innerRings.add(innerRing);
 				}
-				innerRings.add(innerRing);
 			}
 		}
 

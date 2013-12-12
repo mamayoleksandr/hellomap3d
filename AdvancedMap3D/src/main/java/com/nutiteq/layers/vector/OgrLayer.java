@@ -87,11 +87,11 @@ public class OgrLayer extends GeometryLayer {
 		this.ogrHelper = new OgrHelper(fileName, tableName, proj, this, pointStyleSet, lineStyleSet, polygonStyleSet, labelStyle, maxElements, false);
 		
 		// ogr stdout redirect
-		new Thread() {
-		    public void run() {
-		        ogr.nativePipeSTDERRToLogcat();
-		    }
-		}.start();
+//		new Thread() {
+//		    public void run() {
+//		        ogr.nativePipeSTDERRToLogcat();
+//		    }
+//		}.start();
 		
 		
 		if (pointStyleSet != null) {
@@ -119,6 +119,15 @@ public class OgrLayer extends GeometryLayer {
     @Override
     public Envelope getDataExtent() {
         return ogrHelper.getDataExtent();
+    }
+
+    public String[] getTableList() {
+        return ogrHelper.getTableList();
+    }
+
+    public void setTable(String selectedTable) {
+        ogrHelper.setTable(selectedTable);
+        
     }
 
 }

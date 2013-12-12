@@ -5,6 +5,9 @@ import java.io.FileFilter;
 import java.io.IOException;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -12,6 +15,7 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.Window;
+import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ZoomControls;
 
@@ -20,12 +24,14 @@ import com.nutiteq.advancedmap.R;
 import com.nutiteq.advancedmap.R.drawable;
 import com.nutiteq.advancedmap.R.id;
 import com.nutiteq.advancedmap.R.layout;
+import com.nutiteq.components.Bounds;
 import com.nutiteq.components.Components;
 import com.nutiteq.components.Envelope;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.components.Options;
 import com.nutiteq.filepicker.FilePickerActivity;
 import com.nutiteq.layers.raster.TMSMapLayer;
+import com.nutiteq.layers.vector.OgrHelper;
 import com.nutiteq.layers.vector.OgrLayer;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.EPSG3857;
@@ -53,7 +59,13 @@ import com.nutiteq.utils.UnscaledBitmapLoader;
  */
 public class VectorFileMapActivity extends Activity implements FilePickerActivity {
 
-	private MapView mapView;
+	private static final int DIALOG_TABLE_LIST = 1;
+	
+    private MapView mapView;
+
+    private OgrLayer ogrLayer;
+
+    private String[] tableList;
 
     
 	@Override
@@ -105,7 +117,6 @@ public class VectorFileMapActivity extends Activity implements FilePickerActivit
 		mapView.setZoom(10.0f);
         // tilt means perspective view. Default is 90 degrees for "normal" 2D map view, minimum allowed is 30 degrees.
 		mapView.setTilt(90.0f);
-
 
 		// Activate some mapview options to make it smoother - optional
 		mapView.getOptions().setPreloading(false);
@@ -159,14 +170,6 @@ public class VectorFileMapActivity extends Activity implements FilePickerActivit
         
         addOgrLayer(mapLayer.getProjection(), file, null, Color.BLUE);
         
-     // 5. Add set of static OGR vector layers to map
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/buildings.shp","buildings", Color.DKGRAY);
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/points.shp", "points",Color.CYAN);
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/places.shp", "places",Color.BLACK);
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/roads.shp","roads",Color.YELLOW);
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/railways.shp","railways",Color.GRAY);
-//        addOgrLayer(mapLayer.getProjection(),Environment.getExternalStorageDirectory()+"/mapxt/eesti/waterways.shp","waterways",Color.BLUE);
-        
 	}
 
     @Override
@@ -209,34 +212,67 @@ public class VectorFileMapActivity extends Activity implements FilePickerActivit
                        .setTitleFont(Typeface.create("Arial", Typeface.BOLD), (int) (16 * dpi))
                        .setDescriptionFont(Typeface.create("Arial", Typeface.NORMAL), (int) (13 * dpi))
                        .build();
-
         
-        OgrLayer ogrLayer;
         try {
             ogrLayer = new OgrLayer(proj, dbPath, table, 500, pointStyleSet, lineStyleSet, polygonStyleSet, labelStyle);
-            mapView.getLayers().addLayer(ogrLayer);
-
-            Envelope extent = ogrLayer.getDataExtent();
-            int screenHeight = metrics.heightPixels;
-            int screenWidth = metrics.widthPixels;
-
-            double zoom = Math.log((screenWidth * (Math.PI * 6378137.0f * 2.0f)) 
-                / ((extent.maxX-extent.minX) * 256.0)) / Math.log(2);
-
-            MapPos centerPoint = new MapPos((extent.maxX+extent.minX)/2,(extent.maxY+extent.minY)/2);
-            Log.debug("found extent "+extent+", zoom "+zoom+", centerPoint "+centerPoint);
-
-            mapView.setZoom((float) zoom);
-            mapView.setFocusPoint(centerPoint); 
-
+            tableList = ogrLayer.getTableList();
+            if(table == null && tableList != null){
+                // show layer/table selector if there are more than 1 layer
+                if(tableList.length > 1){
+                    showDialog(DIALOG_TABLE_LIST);
+                }else{
+                    addOgrTable(0);
+                }
+            }
+            
         } catch (IOException e) {
             Log.error(e.getLocalizedMessage());
             Toast.makeText(this, "ERROR "+e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
         }
+
+        
+
+        
     }
 	
     public MapView getMapView() {
         return mapView;
+    }
+
+    @Override
+    protected Dialog onCreateDialog(int id) {
+        switch(id){
+
+        case DIALOG_TABLE_LIST:
+            return new AlertDialog.Builder(this)
+            .setTitle("Select table:")
+            .setSingleChoiceItems(tableList, 0, null)
+            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                    dialog.dismiss();
+                    int selectedPosition = ((AlertDialog) dialog)
+                            .getListView().getCheckedItemPosition();
+                    addOgrTable(selectedPosition);
+                }
+            }).create();
+            
+        }
+        return null;
+    }
+    
+    protected void addOgrTable(int selectedPosition) {
+
+        mapView.getLayers().addLayer(ogrLayer);
+        String[] tableKey = tableList[selectedPosition].split(OgrHelper.TABLE_SEPARATOR);
+        String selectedTable = tableKey[0];
+        ogrLayer.setTable(selectedTable);
+        
+        Envelope extent = ogrLayer.getDataExtent();
+        if (extent != null) {
+            mapView.setBoundingBox(new Bounds(extent.minX, extent.maxY,
+                    extent.maxX, extent.minY), true);
+        } 
+        
     }
 
     @Override
@@ -248,7 +284,8 @@ public class VectorFileMapActivity extends Activity implements FilePickerActivit
     public FileFilter getFileFilter() {
         return new FileFilter() {
             @Override
-            public boolean accept(File file) {                
+            public boolean accept(File file) {
+                // accept any file, as number of possible extensions is big
                 return true;
             }
         };
