@@ -1,6 +1,8 @@
 package com.nutiteq.hellomap;
 
-import android.annotation.SuppressLint;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -19,11 +21,14 @@ import com.nutiteq.geometry.Marker;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.EPSG3857;
 import com.nutiteq.projections.Projection;
-import com.nutiteq.rasterlayers.TMSMapLayer;
+import com.nutiteq.rasterdatasources.HTTPRasterDataSource;
+import com.nutiteq.rasterdatasources.RasterDataSource;
+import com.nutiteq.rasterlayers.RasterLayer;
 import com.nutiteq.style.MarkerStyle;
 import com.nutiteq.ui.DefaultLabel;
 import com.nutiteq.ui.Label;
 import com.nutiteq.utils.UnscaledBitmapLoader;
+import com.nutiteq.vectorlayers.GeometryLayer;
 import com.nutiteq.vectorlayers.MarkerLayer;
 
 import java.util.List;
@@ -38,8 +43,9 @@ public class HelloMap3DActivity extends Activity {
 
     private MapView mapView;
     private LocationListener locationListener;
+    private GeometryLayer locationLayer; 
+    private Timer locationTimer;
 
-    @SuppressLint("NewApi")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,9 +64,6 @@ public class HelloMap3DActivity extends Activity {
         if (retainObject != null) {
             // just restore configuration and update listener, skip other initializations
             mapView.setComponents(retainObject);
-            MyLocationMapEventListener mapListener = (MyLocationMapEventListener) mapView.getOptions().getMapListener();
-            mapListener.reset(this, mapView);
-            mapView.startMapping();
             return;
         } else {
             // 2. create and set MapView components - mandatory
@@ -68,29 +71,32 @@ public class HelloMap3DActivity extends Activity {
         }
 
         // 3. Define map layer for basemap - mandatory.
-        // Here we use MapQuest open tiles
-        // Almost all online tiled maps use EPSG3857 projection.
-        TMSMapLayer mapLayer = new TMSMapLayer(new EPSG3857(), 0, 18, 0,
-                "http://otile1.mqcdn.com/tiles/1.0.0/osm/", "/", ".png");
+        // Here we use MapQuest open tiles.
+        // We use online data source for the tiles and the URL is given as template. Almost all online tiled maps use EPSG3857 projection.
+        RasterDataSource dataSource = new HTTPRasterDataSource(new EPSG3857(), 0, 18, "http://otile1.mqcdn.com/tiles/1.0.0/osm/{zoom}/{x}/{y}.png");
+
+        RasterLayer mapLayer = new RasterLayer(dataSource, 0);
 
         mapView.getLayers().setBaseLayer(mapLayer);
 
         adjustMapDpi();
         
-//        mapView.getOptions().setFPSIndicator(true);
-//        mapView.getOptions().setRasterTaskPoolSize(4);
+        // Show performance indicator
+        //mapView.getOptions().setFPSIndicator(true);
+        
+        // Increase raster tile download speed by doing 4 downloads in parallel
+        //mapView.getOptions().setRasterTaskPoolSize(4);
         
         // set initial map view camera - optional. "World view" is default
         // Location: San Francisco 
         // NB! it must be in base layer projection (EPSG3857), so we convert it from lat and long
         mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(-122.41666666667f, 37.76666666666f));
         // rotation - 0 = north-up
-        mapView.setRotation(0f);
+        mapView.setMapRotation(0f);
         // zoom - 0 = world, like on most web maps
         mapView.setZoom(16.0f);
         // tilt means perspective view. Default is 90 degrees for "normal" 2D map view, minimum allowed is 30 degrees.
         mapView.setTilt(65.0f);
-
 
         // Activate some mapview options to make it smoother - optional
         mapView.getOptions().setPreloading(true);
@@ -121,13 +127,13 @@ public class HelloMap3DActivity extends Activity {
         // define online map persistent caching - optional, suggested. Default - no caching
         //mapView.getOptions().setPersistentCachePath(this.getDatabasePath("mapcache").getPath());
         // set persistent raster cache limit to 100MB
-        mapView.getOptions().setPersistentCacheSize(100 * 1024 * 1024);
-
+        //mapView.getOptions().setPersistentCacheSize(100 * 1024 * 1024);
 
         // 5. Add simple marker to map. 
         // define marker style (image, size, color)
         Bitmap pointMarker = UnscaledBitmapLoader.decodeResource(getResources(), R.drawable.olmarker);
         MarkerStyle markerStyle = MarkerStyle.builder().setBitmap(pointMarker).setSize(0.5f).setColor(Color.WHITE).build();
+
         // define label what is shown when you click on marker
         Label markerLabel = new DefaultLabel("San Francisco", "Here is a marker");
         
@@ -141,7 +147,7 @@ public class HelloMap3DActivity extends Activity {
         mapView.getLayers().addLayer(markerLayer);
 
         // add event listener
-        MyLocationMapEventListener mapListener = new MyLocationMapEventListener(this, mapView);
+        MyMapEventListener mapListener = new MyMapEventListener(this, mapView);
         mapView.getOptions().setMapListener(mapListener);
     }
 
@@ -155,24 +161,43 @@ public class HelloMap3DActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
+
         // 4. Start the map - mandatory.
         mapView.startMapping();
+        
+        // Create layer for location circle
+        locationLayer = new GeometryLayer(mapView.getLayers().getBaseProjection());
+        mapView.getComponents().layers.addLayer(locationLayer);
 
         // add GPS My Location functionality 
-        MyLocationCircle locationCircle = new MyLocationCircle();
-        MyLocationMapEventListener mapListener = (MyLocationMapEventListener) mapView.getOptions().getMapListener();
-        mapListener.setLocationCircle(locationCircle);
+        final MyLocationCircle locationCircle = new MyLocationCircle(locationLayer);
         initGps(locationCircle);
+        
+        // Run animation
+        locationTimer = new Timer();
+        locationTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                locationCircle.update(mapView.getZoom());
+            }
+        }, 0, 50);
     }
 
     @Override
     protected void onStop() {
+        // Stop animation
+        locationTimer.cancel();
+        
+        // Remove created layer
+        mapView.getComponents().layers.removeLayer(locationLayer);
+
         // remove GPS support, otherwise we will leak memory
         deinitGps();
 
-        super.onStop();
         // Note: it is recommended to move startMapping() call to onStart method and implement onStop method (call MapView.stopMapping() from onStop). 
         mapView.stopMapping();
+
+        super.onStop();
     }
 
     @Override
@@ -186,14 +211,12 @@ public class HelloMap3DActivity extends Activity {
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                 if (locationCircle != null) {
-                     locationCircle.setLocation(proj, location);
-                     locationCircle.setVisible(true);
+                 locationCircle.setLocation(proj, location);
+                 locationCircle.setVisible(true);
                      
-                     // recenter automatically to GPS point
-                     // TODO in real app it can be annoying this way, add extra control that it is done only once
-                     mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(location.getLongitude(), location.getLatitude()));
-                 }
+                 // recenter automatically to GPS point
+                 // TODO in real app it can be annoying this way, add extra control that it is done only once
+                 mapView.setFocusPoint(mapView.getLayers().getBaseProjection().fromWgs84(location.getLongitude(), location.getLatitude()));
             }
 
             @Override

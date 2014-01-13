@@ -14,14 +14,15 @@
       </intent-filter>
     </activity>
     <activity android:name=".activity.AdvancedMapActivity"></activity>
+    <activity android:name=".activity.GlobeRenderingActivity"></activity>
+    <activity android:name=".activity.ComposedRasterDataSourceActivity"></activity>
     <activity android:name="com.nutiteq.fragmentmap.FragmentMapActivity"></activity>
     <activity android:name="com.nutiteq.fragmentmap.InfoActivity"></activity>
     <activity android:name=".activity.MBTilesMapActivity"></activity>
     <activity android:name=".activity.BasicMapActivity"></activity>
     <activity android:name=".activity.VectorFileMapActivity"></activity>
     <activity android:name=".activity.EditableCartoDbMapActivity"></activity>
-    <activity android:name=".activity.EditableSpatialiteMapActivity"></activity>
-    <activity android:name=".activity.EditableVectorMapActivity"></activity>
+    <activity android:name=".activity.EditableVectorFileMapActivity"></activity>
     <activity android:name=".activity.CartoDbVectorMapActivity"></activity>
     <activity android:name=".activity.MapBoxMapActivity"></activity>
     <activity android:name=".activity.MapsForgeMapActivity"></activity>
@@ -35,7 +36,6 @@
     <activity android:name=".activity.CloudMadeRouteActivity"></activity>
     <activity android:name=".activity.Online3DMapActivity"></activity>
     <activity android:name=".activity.WfsMapActivity"></activity>
-    <activity android:name=".activity.SpatialiteMapActivity"></activity>
     <activity
     android:name="com.nutiteq.advancedmap.mapquest.SearchQueryResults"
     android:exported="false">
