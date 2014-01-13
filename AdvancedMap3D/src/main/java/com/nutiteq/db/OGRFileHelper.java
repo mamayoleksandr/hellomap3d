@@ -46,6 +46,16 @@ import com.nutiteq.utils.WktWriter;
  */
 public abstract class OGRFileHelper {
 
+    public static final String TABLE_SEPARATOR = " |";
+
+    private static final String EPSG_3785_WKT = "PROJCS[\"Google Maps Global Mercator\",    GEOGCS[\"WGS 84\",        DATUM[\"WGS_1984\",            SPHEROID[\"WGS 84\",6378137,298.257223563,                AUTHORITY[\"EPSG\",\"7030\"]],            AUTHORITY[\"EPSG\",\"6326\"]],        PRIMEM[\"Greenwich\",0,            AUTHORITY[\"EPSG\",\"8901\"]],        UNIT[\"degree\",0.01745329251994328,            AUTHORITY[\"EPSG\",\"9122\"]],        AUTHORITY[\"EPSG\",\"4326\"]],    PROJECTION[\"Mercator_2SP\"],    PARAMETER[\"standard_parallel_1\",0],    PARAMETER[\"latitude_of_origin\",0],    PARAMETER[\"central_meridian\",0],    PARAMETER[\"false_easting\",0],    PARAMETER[\"false_northing\",0],    UNIT[\"Meter\",1],    EXTENSION[\"PROJ4\",\"+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs\"],    AUTHORITY[\"EPSG\",\"3785\"]]";
+
+    // define some synonyms of EPSG3785 to avoid transformations for these
+    private static final String EPSG_3785_PROJ4 =       "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs";
+    private static final String EPSG_3785_PROJ4BIS =    "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"; 
+    private static final String EPSG_3785_PROJ4BIS2 =   "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+    private static final String EPSG_3785_PROJ4BIS3 =   "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+
     private Layer layer;
     private boolean transformNeeded;
     
@@ -56,15 +66,6 @@ public abstract class OGRFileHelper {
     private int maxElements = Integer.MAX_VALUE;
     private static Vector<String> knownExtensions = new Vector<String>();
     
-    private static final String EPSG_3785_WKT = "PROJCS[\"Google Maps Global Mercator\",    GEOGCS[\"WGS 84\",        DATUM[\"WGS_1984\",            SPHEROID[\"WGS 84\",6378137,298.257223563,                AUTHORITY[\"EPSG\",\"7030\"]],            AUTHORITY[\"EPSG\",\"6326\"]],        PRIMEM[\"Greenwich\",0,            AUTHORITY[\"EPSG\",\"8901\"]],        UNIT[\"degree\",0.01745329251994328,            AUTHORITY[\"EPSG\",\"9122\"]],        AUTHORITY[\"EPSG\",\"4326\"]],    PROJECTION[\"Mercator_2SP\"],    PARAMETER[\"standard_parallel_1\",0],    PARAMETER[\"latitude_of_origin\",0],    PARAMETER[\"central_meridian\",0],    PARAMETER[\"false_easting\",0],    PARAMETER[\"false_northing\",0],    UNIT[\"Meter\",1],    EXTENSION[\"PROJ4\",\"+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs\"],    AUTHORITY[\"EPSG\",\"3785\"]]";
-
-    // define some synonyms of EPSG3785 to avoid transformations for these
-    private static final String EPSG_3785_PROJ4 =       "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs";
-    private static final String EPSG_3785_PROJ4BIS =    "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"; 
-    private static final String EPSG_3785_PROJ4BIS2 =   "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
-    private static final String EPSG_3785_PROJ4BIS3 =   "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
-
-
     public OGRFileHelper(String fileName, String tableName, boolean update) throws IOException {
         
         // open dataset
@@ -89,9 +90,9 @@ public abstract class OGRFileHelper {
             throw new IOException("OGRFileHelper: could not find layer '"+tableName+"'");
         }
         
-        printLayerDetails();
+        printLayerDetails(layer);
         
-        this.fieldNames = getFieldNames();
+        this.fieldNames = getFieldNames(layer);
         
         initProjections();
     }
@@ -272,7 +273,7 @@ public abstract class OGRFileHelper {
         return new MapPos(transPoint[0], transPoint[1]);
     }
     
-    private String[] getFieldNames() {
+    private String[] getFieldNames(Layer layer) {
 
         FeatureDefn poDefn = layer.GetLayerDefn();
         
@@ -286,7 +287,7 @@ public abstract class OGRFileHelper {
     }
     
     // print layer details for troubleshooting. Code from ogrinfo.java
-    public void printLayerDetails() {
+    public void printLayerDetails(Layer layer) {
 
         FeatureDefn poDefn = layer.GetLayerDefn();
         Log.debug("Layer name: " + poDefn.GetName());
@@ -374,7 +375,21 @@ public abstract class OGRFileHelper {
 
         return false;
     }
-    
+
+    public String[] getTableList() {
+        Vector<String> tables = new Vector<String>();
+        // debug print all layer data 
+        for (int i=0; i < hDataset.GetLayerCount(); i++){
+            Layer layerI = hDataset.GetLayer(i);
+            tables.add(layerI.GetName() + TABLE_SEPARATOR + layerI.GetFeatureCount()+" "+ogr.GeometryTypeToName(layerI.GetGeomType()));
+        }
+        return tables.toArray(new String[tables.size()]);
+    }
+
+    public void setTable(String tableName) {
+        this.layer = hDataset.GetLayerByName(tableName);
+        this.fieldNames = getFieldNames(layer);
+    }
     
     /**
      * Creates transformers for projection transformations, if needed

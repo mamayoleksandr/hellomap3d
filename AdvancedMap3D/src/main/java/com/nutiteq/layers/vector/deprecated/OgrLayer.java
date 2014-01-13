@@ -127,7 +127,7 @@ public class OgrLayer extends GeometryLayer {
         // ogr stdout redirect
         new Thread() {
             public void run() {
-                ogr.nativePipeSTDERRToLogcat();
+                //ogr.nativePipeSTDERRToLogcat();
             }
         }.start();
 
@@ -157,5 +157,14 @@ public class OgrLayer extends GeometryLayer {
     @Override
     public Envelope getDataExtent() {
         return ogrHelper.getDataExtent();
+    }
+
+    public String[] getTableList() {
+        return ogrHelper.getTableList();
+    }
+
+    public void setTable(String selectedTable) {
+        ogrHelper.setTable(selectedTable);
+        
     }
 }

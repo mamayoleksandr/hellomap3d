@@ -39,14 +39,6 @@ public abstract class OGRVectorDataSource extends AbstractVectorDataSource<Geome
             // force Java to load PROJ.4 library. Needed as we don't call it directly, but 
             // OGR datasource reading may need it.
             System.loadLibrary("proj");
-
-            // OGR stdout redirect
-            new Thread() {
-                @Override
-                public void run() {
-                    ogr.nativePipeSTDERRToLogcat();
-                }
-            }.start();
         } catch (Throwable t) {
             System.err.println("OGRVectorDataSource: Unable to load proj: " + t);
         }

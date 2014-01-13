@@ -7,6 +7,7 @@ import java.util.Vector;
 import android.graphics.Paint.Align;
 import android.graphics.Typeface;
 
+import com.nutiteq.components.Components;
 import com.nutiteq.components.Envelope;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.db.SpatialLiteDbHelper;
@@ -14,6 +15,7 @@ import com.nutiteq.geometry.Geometry;
 import com.nutiteq.geometry.Line;
 import com.nutiteq.geometry.Point;
 import com.nutiteq.geometry.Polygon;
+import com.nutiteq.layers.Layer;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.Projection;
 import com.nutiteq.style.LabelStyle;
@@ -293,5 +295,17 @@ public class SpatialiteLayer extends GeometryLayer {
         Log.debug("added verteces: "+numVert);
         setVisibleElements(objects);
 
+        // send objects to SpatialiteTextLayer, so they will be updated
+        Components components = getComponents();
+        if (components != null) {
+            for (Layer layer : components.layers.getVectorLayers()) {
+                if (layer instanceof SpatialiteTextLayer) {
+                    SpatialiteTextLayer textLayer = (SpatialiteTextLayer) layer;
+                    if (textLayer.getBaseLayer() == SpatialiteLayer.this) {
+                        textLayer.calculateVisibleElements(objects, zoom);
+                    }
+                }
+            }
+        }
     }
 }
