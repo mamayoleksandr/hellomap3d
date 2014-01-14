@@ -7,8 +7,12 @@ import java.util.Map;
 import org.gdal.ogr.ogr;
 
 import com.nutiteq.components.Envelope;
+import com.nutiteq.components.MapPos;
 import com.nutiteq.db.OGRFileHelper;
 import com.nutiteq.geometry.Geometry;
+import com.nutiteq.geometry.Line;
+import com.nutiteq.geometry.Point;
+import com.nutiteq.geometry.Polygon;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.Projection;
 import com.nutiteq.style.LabelStyle;
@@ -19,6 +23,7 @@ import com.nutiteq.style.StyleSet;
 import com.nutiteq.tasks.Task;
 import com.nutiteq.ui.DefaultLabel;
 import com.nutiteq.ui.Label;
+import com.nutiteq.utils.WkbRead.GeometryFactory;
 import com.nutiteq.vectorlayers.GeometryLayer;
 
 /**
@@ -32,6 +37,10 @@ public class OgrLayer extends GeometryLayer {
 
     private float minZoom = Float.MAX_VALUE;
     private OGRFileHelper ogrHelper;
+    private StyleSet<PointStyle> pointStyleSet;
+    private StyleSet<LineStyle> lineStyleSet;
+    private StyleSet<PolygonStyle> polygonStyleSet;
+    private LabelStyle labelStyle;
 
     static {
         ogr.RegisterAll();
@@ -60,7 +69,37 @@ public class OgrLayer extends GeometryLayer {
 
         @Override
         public void run() {
-            List<Geometry> visibleElements = ogrHelper.loadData(envelope, zoom);
+            GeometryFactory geomFactory = new GeometryFactory() {
+
+                @SuppressWarnings("unchecked")
+                @Override
+                public Point createPoint(MapPos mapPos, Object userData) {
+                    Label label = createLabel((Map<String, String>) userData);
+                    return new Point(mapPos, label, pointStyleSet, userData);
+                }
+
+                @SuppressWarnings("unchecked")
+                @Override
+                public Line createLine(List<MapPos> points, Object userData) {
+                    Label label = createLabel((Map<String, String>) userData);
+                    return new Line(points, label, lineStyleSet, userData);
+                }
+
+                @SuppressWarnings("unchecked")
+                @Override
+                public Polygon createPolygon(List<MapPos> outerRing, List<List<MapPos>> innerRings, Object userData) {
+                    Label label = createLabel((Map<String, String>) userData);
+                    return new Polygon(outerRing, innerRings, label, polygonStyleSet, userData);
+                }
+
+                @Override
+                public Geometry[] createMultigeometry(List<Geometry> geomList) {
+                    return geomList.toArray(new Geometry[geomList.size()]);
+                }
+
+            };
+
+            List<Geometry> visibleElements = ogrHelper.loadData(envelope, geomFactory);
             for (Geometry element : visibleElements) {
                 element.attachToLayer(OgrLayer.this);
                 element.setActiveStyle(zoom);
@@ -96,33 +135,12 @@ public class OgrLayer extends GeometryLayer {
             int maxElements, final StyleSet<PointStyle> pointStyleSet, final StyleSet<LineStyle> lineStyleSet, final StyleSet<PolygonStyle> polygonStyleSet, final LabelStyle labelStyle) throws IOException {
         super(proj);
 
-        this.ogrHelper = new OGRFileHelper(fileName, tableName, true) {
-            @Override
-            protected Label createLabel(Map<String, String> userData) {
-                StringBuffer labelTxt = new StringBuffer();
-                for(Map.Entry<String, String> entry : ((Map<String, String>) userData).entrySet()){
-                    labelTxt.append(entry.getKey() + ": " + entry.getValue() + "\n");
-                }
-
-                return new DefaultLabel("Data:", labelTxt.toString(), labelStyle);
-            }
-
-            @Override
-            protected StyleSet<PointStyle> createPointStyleSet(Map<String, String> userData, int zoom) {
-                return pointStyleSet;
-            }
-
-            @Override
-            protected StyleSet<LineStyle> createLineStyleSet(Map<String, String> userData, int zoom) {
-                return lineStyleSet;
-            }
-
-            @Override
-            protected StyleSet<PolygonStyle> createPolygonStyleSet(Map<String, String> userData, int zoom) {
-                return polygonStyleSet;
-            }
-        };
+        this.ogrHelper = new OGRFileHelper(fileName, tableName, true);
         this.ogrHelper.setMaxElements(maxElements);
+        this.pointStyleSet = pointStyleSet;
+        this.lineStyleSet = lineStyleSet;
+        this.polygonStyleSet = polygonStyleSet;
+        this.labelStyle = labelStyle;
 
         // ogr stdout redirect
         new Thread() {
@@ -165,6 +183,13 @@ public class OgrLayer extends GeometryLayer {
 
     public void setTable(String selectedTable) {
         ogrHelper.setTable(selectedTable);
-        
+    }
+
+    private Label createLabel(Map<String, String> userData) {
+        StringBuffer labelTxt = new StringBuffer();
+        for(Map.Entry<String, String> entry : userData.entrySet()){
+            labelTxt.append(entry.getKey() + ": " + entry.getValue() + "\n");
+        }
+        return new DefaultLabel("Data:", labelTxt.toString(), labelStyle);
     }
 }

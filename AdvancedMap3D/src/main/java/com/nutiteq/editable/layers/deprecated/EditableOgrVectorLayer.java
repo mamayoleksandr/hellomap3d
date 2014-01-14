@@ -71,27 +71,7 @@ public class EditableOgrVectorLayer extends EditableGeometryDbLayer {
             final StyleSet<PointStyle> pointStyleSet, final StyleSet<LineStyle> lineStyleSet, final StyleSet<PolygonStyle> polygonStyleSet, LabelStyle labelStyle, Context context) throws IOException {
         super(proj, pointStyleSet, lineStyleSet, polygonStyleSet, context);
 
-        this.ogrHelper = new OGRFileHelper(fileName, tableName, true) {
-            @Override
-            protected Label createLabel(Map<String, String> userData) {
-                return EditableOgrVectorLayer.this.createLabel(userData);
-            }
-
-            @Override
-            protected StyleSet<PointStyle> createPointStyleSet(Map<String, String> userData, int zoom) {
-                return pointStyleSet;
-            }
-
-            @Override
-            protected StyleSet<LineStyle> createLineStyleSet(Map<String, String> userData, int zoom) {
-                return lineStyleSet;
-            }
-
-            @Override
-            protected StyleSet<PolygonStyle> createPolygonStyleSet(Map<String, String> userData, int zoom) {
-                return polygonStyleSet;
-            }
-        };
+        this.ogrHelper = new OGRFileHelper(fileName, tableName, true);
         this.ogrHelper.setMaxElements(maxObjects);
         this.labelStyle = labelStyle;
 
@@ -114,7 +94,7 @@ public class EditableOgrVectorLayer extends EditableGeometryDbLayer {
         LongHashMap<Geometry> newElementMap = new LongHashMap<Geometry>();
 
         try {
-            List<Geometry> data = ogrHelper.loadData(projection.fromInternal(envelope), zoom);
+            List<Geometry> data = ogrHelper.loadData(projection.fromInternal(envelope));
             for (Geometry geom : data) {
                 geom.attachToLayer(this);
                 geom.setActiveStyle(zoom);

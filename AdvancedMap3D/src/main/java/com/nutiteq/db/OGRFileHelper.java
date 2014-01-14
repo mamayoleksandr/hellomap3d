@@ -29,13 +29,9 @@ import com.nutiteq.geometry.Line;
 import com.nutiteq.geometry.Point;
 import com.nutiteq.geometry.Polygon;
 import com.nutiteq.log.Log;
-import com.nutiteq.style.LineStyle;
-import com.nutiteq.style.PointStyle;
-import com.nutiteq.style.PolygonStyle;
-import com.nutiteq.style.StyleSet;
-import com.nutiteq.ui.DefaultLabel;
-import com.nutiteq.ui.Label;
 import com.nutiteq.utils.WkbRead;
+import com.nutiteq.utils.WkbRead.GeometryFactory;
+import com.nutiteq.utils.WkbRead.DefaultGeometryFactory;
 import com.nutiteq.utils.WktWriter;
 
 /**
@@ -44,7 +40,7 @@ import com.nutiteq.utils.WktWriter;
  * @author jaak
  *
  */
-public abstract class OGRFileHelper {
+public class OGRFileHelper {
 
     public static final String TABLE_SEPARATOR = " |";
 
@@ -101,7 +97,11 @@ public abstract class OGRFileHelper {
         this.maxElements = maxElements;
     }
 
-    public List<com.nutiteq.geometry.Geometry> loadData(Envelope envelope, int zoom) {
+    public List<com.nutiteq.geometry.Geometry> loadData(Envelope envelope) {
+        return loadData(envelope, new DefaultGeometryFactory());
+    }
+
+    public List<com.nutiteq.geometry.Geometry> loadData(Envelope envelope, GeometryFactory geomFactory) {
         long timeStart = System.currentTimeMillis();
 
         if (transformNeeded) {
@@ -143,38 +143,27 @@ public abstract class OGRFileHelper {
                 userData.put(this.fieldNames[field], feature.GetFieldAsString(field));
             }
             
-            Label label = createLabel(userData);
-
             byte[] geomWkb = poSrcGeom.ExportToWkb();
-            com.nutiteq.geometry.Geometry[] geoms = WkbRead.readWkb(new ByteArrayInputStream(geomWkb), userData);
+            com.nutiteq.geometry.Geometry[] geoms = WkbRead.readWkb(new ByteArrayInputStream(geomWkb), geomFactory, userData);
             
-            // add stylesets, new objects are needed for this
+            // Set element ids
             for(int i = 0; i<geoms.length; i++){
-                com.nutiteq.geometry.Geometry object = geoms[i];           
-                com.nutiteq.geometry.Geometry newObject = null;
-                
+                com.nutiteq.geometry.Geometry geom = geoms[i];
                 if(transformNeeded){
-                    if(object instanceof com.nutiteq.geometry.Point){
-                        newObject = new com.nutiteq.geometry.Point((transformPoint(((Point) object).getMapPos(), transformerToMap)), label, createPointStyleSet(userData, zoom), object.userData);
-                    }else if(object instanceof Line){
-                        newObject = new com.nutiteq.geometry.Line(transformPointList(((Line) object).getVertexList(), transformerToMap), label, createLineStyleSet(userData, zoom), object.userData);
-                    }else if(object instanceof Polygon){
-                        newObject = new com.nutiteq.geometry.Polygon(transformPointList(((Polygon) object).getVertexList(), transformerToMap), transformPointListList(((Polygon) object).getHolePolygonList(), transformerToMap), label, createPolygonStyleSet(userData, zoom), object.userData);
+                    if(geom instanceof com.nutiteq.geometry.Point){
+                        Point point = (Point) geom;
+                        point.setMapPos(transformPoint(point.getMapPos(), transformerToMap));
+                    }else if(geom instanceof Line){
+                        Line line = (Line) geom;
+                        line.setVertexList(transformPointList(line.getVertexList(), transformerToMap));
+                    }else if(geom instanceof Polygon){
+                        Polygon polygon = (Polygon) geom;
+                        polygon.setVertexList(transformPointList(polygon.getVertexList(), transformerToMap));
+                        polygon.setHolePolygonList(transformPointListList(polygon.getHolePolygonList(), transformerToMap));
                     }
-                    
-                }else{
-                    if(object instanceof com.nutiteq.geometry.Point){
-                        newObject = new com.nutiteq.geometry.Point((((Point) object).getMapPos()), label, createPointStyleSet(userData, zoom), object.userData);
-                    }else if(object instanceof Line){
-                        newObject = new com.nutiteq.geometry.Line(((Line) object).getVertexList(), label, createLineStyleSet(userData, zoom), object.userData);
-                    }else if(object instanceof Polygon){
-                        newObject = new com.nutiteq.geometry.Polygon(((Polygon) object).getVertexList(), ((Polygon) object).getHolePolygonList(), label, createPolygonStyleSet(userData, zoom), object.userData);
-                    }
-                    
                 }
-                
-                newObject.setId(feature.GetFID());
-                elementList.add(newObject);
+                geom.setId(feature.GetFID());
+                elementList.add(geom);
             }
 
             feature = layer.GetNextFeature();
@@ -432,20 +421,4 @@ public abstract class OGRFileHelper {
         }
         return null;
     }
-    
-    protected Label createLabel(Map<String, String> userData) {
-        StringBuffer labelTxt = new StringBuffer();
-        for(Map.Entry<String, String> entry : userData.entrySet()){
-            labelTxt.append(entry.getKey() + ": " + entry.getValue()+"\n");
-        }
-        
-        return new DefaultLabel(layer.GetName(), labelTxt.toString());
-    }
-
-    protected abstract StyleSet<PointStyle> createPointStyleSet(Map<String, String> userData, int zoom);
-
-    protected abstract StyleSet<LineStyle> createLineStyleSet(Map<String, String> userData, int zoom);
-
-    protected abstract StyleSet<PolygonStyle> createPolygonStyleSet(Map<String, String> userData, int zoom);
-    
 }
