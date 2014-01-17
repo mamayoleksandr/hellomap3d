@@ -49,7 +49,10 @@ import com.nutiteq.vectorlayers.Polygon3DLayer;
 import com.nutiteq.vectorlayers.TextLayer;
 
 /**
- * This is an example of Nutiteq 3D globe rendering
+ * This is an example of Nutiteq 3D globe rendering.
+ * Used layers:
+ *  raster with TMS data source (EPSG4326 projection as EPSG3857 does not define pole area)
+ *  marker, text, geometry
  *  
  * @author mark
  * 
@@ -260,18 +263,18 @@ public class GlobeRenderingActivity extends Activity {
     private void addTextLayer() {
         TextLayer textLayer = new TextLayer(mapView.getComponents().layers.getBaseProjection());
         mapView.getComponents().layers.addLayer(textLayer);
-        TextStyle textStyle = TextStyle.builder().setOrientation(MarkerStyle.GROUND_ORIENTATION).setAllowOverlap(false).setSize(30).build();
+        TextStyle textStyle = TextStyle.builder().setOrientation(MarkerStyle.GROUND_ORIENTATION).setAllowOverlap(false).setSize(20).build();
         MapPos origin = mapView.getComponents().layers.getBaseProjection().fromWgs84(-129.416667f, 10.766667f);
         Text text = new Text(origin, "Text Ground", textStyle, null);
         textLayer.add(text);
 
         Typeface font = Typeface.create(Typeface.createFromAsset(this.getAssets(), "fonts/zapfino.ttf"), Typeface.BOLD);
-        TextStyle textStyle2 = TextStyle.builder().setOrientation(MarkerStyle.GROUND_BILLBOARD_ORIENTATION).setAllowOverlap(false).setSize(36).setFont(font).build();
+        TextStyle textStyle2 = TextStyle.builder().setOrientation(MarkerStyle.GROUND_BILLBOARD_ORIENTATION).setAllowOverlap(false).setSize(20).setFont(font).build();
         MapPos origin2 = mapView.getComponents().layers.getBaseProjection().fromWgs84(-100.416667f, 30.766667f);
         Text text2 = new Text(origin2, "Text Ground Billboard", textStyle2, null);
         textLayer.add(text2);
 
-        TextStyle textStyle3 = TextStyle.builder().setOrientation(MarkerStyle.CAMERA_BILLBOARD_ORIENTATION).setAllowOverlap(false).setSize(36).setFont(font).build();
+        TextStyle textStyle3 = TextStyle.builder().setOrientation(MarkerStyle.CAMERA_BILLBOARD_ORIENTATION).setAllowOverlap(false).setSize(20).setFont(font).build();
         MapPos origin3 = mapView.getComponents().layers.getBaseProjection().fromWgs84(-70.416667f, 50.766667f);
         Text text3 = new Text(origin3, "Text Camera Billboard", textStyle3, null);
         textLayer.add(text3);

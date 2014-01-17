@@ -38,7 +38,7 @@ import com.nutiteq.vectorlayers.MarkerLayer;
  *      xml/searchable.xml - needed for Android searchable interface
  *
  * Used layer(s):
- *  TMSMapLayer for base map
+ *  RasterLayer with TMS tile source for base map
  *        
  * @author jaak
  *

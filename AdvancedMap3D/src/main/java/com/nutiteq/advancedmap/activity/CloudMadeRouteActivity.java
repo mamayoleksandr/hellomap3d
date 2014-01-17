@@ -45,7 +45,7 @@ import com.nutiteq.vectorlayers.MarkerLayer;
  * 
  * Classes:
  *  routing.CloudMadeDirections implements CloudMade routing API as described in
- * http://developers.cloudmade.com/projects/show/routing-http-api
+ *  http://developers.cloudmade.com/projects/show/routing-http-api
  * 
  * Resources:
  *  drawable/direction_[down, up, upthenleft, upthenright].png - instruction markers
