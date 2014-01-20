@@ -20,7 +20,6 @@ There are currently following options:
 * Commercial license, (c) Nutiteq Llc. Request nutiteq@nutiteq.com for details
 
 Third party software licenses for core library:
-* JavaProj - Apache License 2.0 http://sourceforge.net/projects/jproj4/ 
 * Poly2tri - New BSD License http://code.google.com/p/poly2tri/
 * Google Protobuf library - used for 3D layers
 
@@ -28,6 +27,7 @@ Some additional layers use free and open source 3rd party software libraries:
 * Mapsforge - used for respective layer
 * OGR/GDAL and Proj.4 - used for OGR and GDAL layers
 * Spatialite lib - used in Spatialite and 3DPolygon layers. 
+* JavaProj - Apache License 2.0 http://sourceforge.net/projects/jproj4/ 
 * JTS - used in 3D Polygon layer with OSM Roofs (Simple 3D)
  
 All these libraries are free and open source.
