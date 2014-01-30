@@ -13,7 +13,7 @@ import org.mapsforge.android.maps.mapgenerator.MapGeneratorFactory;
 import org.mapsforge.android.maps.mapgenerator.MapGeneratorInternal;
 import org.mapsforge.android.maps.mapgenerator.MapGeneratorJob;
 import org.mapsforge.android.maps.mapgenerator.databaserenderer.DatabaseRenderer;
-import org.mapsforge.core.Tile;
+import org.mapsforge.core.model.Tile;
 import org.mapsforge.map.reader.MapDatabase;
 import org.mapsforge.map.reader.header.FileOpenResult;
 
@@ -145,6 +145,11 @@ public class MapsforgeMapLayer extends RasterLayer {
         @Override
         public InputStream getRenderThemeAsStream() {
             return getClass().getResourceAsStream(this.path);
+        }
+
+        @Override
+        public String getRelativePathPrefix() {
+            return "/org/mapsforge/android/maps/rendertheme/osmarender/";
         }
     }
 
