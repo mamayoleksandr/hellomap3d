@@ -53,7 +53,7 @@ dependencies {
     compile "com.google.code.gson:gson:2.2.3"
     compile "com.jhlabs:javaproj-noawt:1.0.7"
     compile "com.google.protobuf:protobuf-java:2.4.1"
-    compile "org.mapsforge.android:mapsforge-map:0.3.0"
+    compile "org.mapsforge.android:mapsforge-map:0.3.1"
     compile "com.samskivert:jmustache:1.5"
     compile "com.graphhopper:graphhopper:0.1.1"
     compile "com.vividsolutions:jts:1.13"
