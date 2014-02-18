@@ -32,7 +32,7 @@ Some additional layers use free and open source 3rd party software libraries:
  
 All these libraries are free and open source.
 
-The Hello Map 3D application code is free and licensed under MIT license terms:
+HelloMap3D and AdvancedMap3D application code is free and licensed under MIT license terms:
 
 Copyright (C) 2012-2013 Nutiteq Llc
 
