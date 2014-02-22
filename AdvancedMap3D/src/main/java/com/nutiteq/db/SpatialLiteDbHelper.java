@@ -287,7 +287,7 @@ public class SpatialLiteDbHelper {
                 // Column values to userData Map
                 Map<String, String> userData = new HashMap<String, String>();
                 for (int i = 2; i < rowdata.length; i++) {
-                    userData.put(userColumns[i - 2], rowdata[i]);
+                    userData.put(userColumns[i - 2].replace("\"", ""), rowdata[i]);
                 }
 
                 // second column is geometry
@@ -494,7 +494,7 @@ public class SpatialLiteDbHelper {
                     String type = rowdata[2].toUpperCase(Locale.US);
                     // add only known safe column types, skip geometries
                     if(type.toUpperCase().equals("INTEGER") || type.toUpperCase().equals("TEXT") || type.toUpperCase().equals("VARCHAR")|| type.toUpperCase().equals("NUMBER") || type.toUpperCase().equals("DOUBLE")){
-                        columns.add(col); 
+                        columns.add("\""+col+"\""); 
                     }
                     return false;
                 }

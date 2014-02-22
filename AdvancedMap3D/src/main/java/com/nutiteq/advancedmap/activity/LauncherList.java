@@ -48,6 +48,7 @@ public class LauncherList extends ListActivity{
             {WfsMapActivity.class, null},
             {com.nutiteq.fragmentmap.FragmentMapActivity.class,null},
             {CompassMapActivity.class,null},
+            {PipesMapActivity.class,null}
     };
 
     @Override

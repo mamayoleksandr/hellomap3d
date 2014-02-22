@@ -26,14 +26,15 @@ import com.nutiteq.vectorlayers.TextLayer;
 @Deprecated
 public abstract class SpatialiteTextLayer extends TextLayer {
 
-    private static final String NAME_COLUMN = "name";
 
     private final SpatialiteLayer baseLayer;
     private int maxVisibleElements = Integer.MAX_VALUE;
+    private String nameColumn;
 
-    public SpatialiteTextLayer(Projection projection, SpatialiteLayer baseLayer) {
+    public SpatialiteTextLayer(Projection projection, SpatialiteLayer baseLayer, String nameColumn) {
         super(projection);
         this.baseLayer = baseLayer;
+        this.nameColumn = nameColumn;
     }
 
     public SpatialiteLayer getBaseLayer() {
@@ -87,7 +88,7 @@ public abstract class SpatialiteTextLayer extends TextLayer {
 
     @SuppressWarnings("unchecked")
     protected Text createText(Geometry feature, int zoom) {
-        String name = ((Map<String, String>)feature.userData).get(NAME_COLUMN);  
+        String name = ((Map<String, String>)feature.userData).get(nameColumn);  
 
         if (name == null) {
             return null;
