@@ -26,7 +26,7 @@
     		</snapshots>
 			<id>cloudbees-nutiteq-snapshot</id>
 			<name>Nutiteq SDK snapshot repository</name>
-			<url>http://repository-nutiteq.forge.cloudbees.com/snapshot/</url>
+			<url>http://repository-nutiteq.forge.cloudbees.com/release/</url>
 		</repository>
 	</repositories>
 	
@@ -44,11 +44,11 @@
 	      <version>2.2.3</version>
 	      <scope>compile</scope>
 	    </dependency>
-   		<!-- dependency>
+   		<dependency>
 			<groupId>com.nutiteq</groupId>
 			<artifactId>nutiteq-3d-sdk</artifactId>
-			<version>snapshot</version>
-		</dependency-->
+			<version>2.3.0</version>
+		</dependency>
 		<dependency>
 			<groupId>com.jhlabs</groupId>
 			<artifactId>javaproj-noawt</artifactId>
