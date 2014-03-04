@@ -122,6 +122,7 @@ public class Polygon3DRoof extends Polygon3D {
   @Override
   public void calculateInternalState() {
     Projection projection = layer.getProjection();
+    RenderProjection renderProjection = layer.getRenderProjection();
    
     // Create polygon shell coordinates
     MutableEnvelope envInternal = new MutableEnvelope();
@@ -260,13 +261,20 @@ public class Polygon3DRoof extends Polygon3D {
           : roofPolygon.getInteriorRingN(n).getCoordinates());
 
       // Calculate vertex orientation of the polygon
-      double area = 0;
-      for (int tsj = 0; tsj < coords.length - 1; tsj++) {
-        Coordinate p1 = coords[tsj];
-        Coordinate p2 = coords[(tsj + 1) % (coords.length - 1)];
-        area += p1.x * p2.y - p1.y * p2.x;
+      double signedArea = 0;
+      for (int i = 0; i < coords.length; i++) {
+        Coordinate c0 = coords[i];
+        Coordinate c1 = coords[(i + 1) % coords.length];
+        Coordinate c2 = coords[(i + 2) % coords.length];
+        Point3D point0 = renderProjection.project(new MapPos(c0.x, c0.y, c0.z));
+        Point3D point1 = renderProjection.project(new MapPos(c1.x, c1.y, c1.z));
+        Point3D point2 = renderProjection.project(new MapPos(c2.x, c2.y, c2.z));
+
+        Vector3D surfaceNormal = renderProjection.getNormal(point1);
+        Vector3D sideNormal = Vector3D.crossProduct(new Vector3D(point0, point1), new Vector3D(point1, point2));
+        signedArea += Vector3D.dotProduct(surfaceNormal, sideNormal);
       }
-      boolean clockwise = (area * (n >= 0 ? -1 : 1) < 0);
+      boolean clockwise = (signedArea * (n >= 0 ? -1 : 1) < 0);
 
       Coordinate firstMapPos = null, prevMapPos = null;
       for (int tsj = 0; tsj <= coords.length - 1; tsj++) {
@@ -329,30 +337,42 @@ public class Polygon3DRoof extends Polygon3D {
     
     // Calculate roof polygon vertices/colors
     for (int i = 0; i < roofVertices.size(); i += 3) {
-      int index = i * 3;
-      verts[index + 0] = (float) (roofVertices.get(i).x - originMapPosInternal.x);
-      verts[index + 1] = (float) (roofVertices.get(i).y - originMapPosInternal.y);
-      verts[index + 2] = (float) (roofVertices.get(i).z - originMapPosInternal.z) + height;
-      verts[index + 3] = (float) (roofVertices.get(i + 1).x - originMapPosInternal.x);
-      verts[index + 4] = (float) (roofVertices.get(i + 1).y - originMapPosInternal.y);
-      verts[index + 5] = (float) (roofVertices.get(i + 1).z - originMapPosInternal.z) + height;
-      verts[index + 6] = (float) (roofVertices.get(i + 2).x - originMapPosInternal.x);
-      verts[index + 7] = (float) (roofVertices.get(i + 2).y - originMapPosInternal.y);
-      verts[index + 8] = (float) (roofVertices.get(i + 2).z - originMapPosInternal.z) + height;
+      int i0 = i, i1 = i + 1, i2 = i + 2;
 
-      // Calculate normal for the roof triangle, flat roof always has the same norma
+      Point3D point0 = renderProjection.project(roofVertices.get(i0));
+      Point3D point1 = renderProjection.project(roofVertices.get(i1));
+      Point3D point2 = renderProjection.project(roofVertices.get(i2));
+
+      Vector3D surfaceNormal = renderProjection.getNormal(point1);
+      Vector3D triangleNormal = Vector3D.crossProduct(new Vector3D(point0, point1), new Vector3D(point1, point2));
+      if (Vector3D.dotProduct(surfaceNormal, triangleNormal) < 0) {
+        i1 = i + 2; i2 = i + 1;
+      }
+      
+      int index = i * 3;
+      verts[index + 0] = (float) (roofVertices.get(i0).x - originMapPosInternal.x);
+      verts[index + 1] = (float) (roofVertices.get(i0).y - originMapPosInternal.y);
+      verts[index + 2] = (float) (roofVertices.get(i0).z - originMapPosInternal.z) + height;
+      verts[index + 3] = (float) (roofVertices.get(i1).x - originMapPosInternal.x);
+      verts[index + 4] = (float) (roofVertices.get(i1).y - originMapPosInternal.y);
+      verts[index + 5] = (float) (roofVertices.get(i1).z - originMapPosInternal.z) + height;
+      verts[index + 6] = (float) (roofVertices.get(i2).x - originMapPosInternal.x);
+      verts[index + 7] = (float) (roofVertices.get(i2).y - originMapPosInternal.y);
+      verts[index + 8] = (float) (roofVertices.get(i2).z - originMapPosInternal.z) + height;
+
+      // Calculate normal for the roof triangle, flat roof always has the same normal
       Vector normal;
       if (roof == null || (roof instanceof FlatRoof)) {       
         normal = new Vector(0, 0, 1);
       } else {
         Vector edge1 = new Vector(
-            roofVertices.get(i + 1).x - roofVertices.get(i).x,
-            roofVertices.get(i + 1).y - roofVertices.get(i).y,
-            roofVertices.get(i + 1).z - roofVertices.get(i).z);
+            roofVertices.get(i1).x - roofVertices.get(i0).x,
+            roofVertices.get(i1).y - roofVertices.get(i0).y,
+            roofVertices.get(i1).z - roofVertices.get(i0).z);
         Vector edge2 = new Vector(
-            roofVertices.get(i + 2).x - roofVertices.get(i).x,
-            roofVertices.get(i + 2).y - roofVertices.get(i).y,
-            roofVertices.get(i + 2).z - roofVertices.get(i).z);
+            roofVertices.get(i2).x - roofVertices.get(i0).x,
+            roofVertices.get(i2).y - roofVertices.get(i0).y,
+            roofVertices.get(i2).z - roofVertices.get(i0).z);
         normal = new Vector(
             edge1.y * edge2.z - edge1.z * edge2.y, 
             edge1.z * edge2.x - edge1.x * edge2.z, 
@@ -363,13 +383,12 @@ public class Polygon3DRoof extends Polygon3D {
       index = i * 3;
       for (int tsj2 = 0; tsj2 < 3; tsj2++) {
     	int index2 = index + tsj2 * 3;
-        colors[index2] = roofColor.r * intensity;
+        colors[index2 + 0] = roofColor.r * intensity;
         colors[index2 + 1] = roofColor.g * intensity;
         colors[index2 + 2] = roofColor.b * intensity;
       }
     }
 
-    RenderProjection renderProjection = layer.getRenderProjection();
     Point3D originPoint = renderProjection.project(originMapPosInternal);
     for (int i = 0; i < verts.length; i += 3) {
       MapPos mapPosInternal = new MapPos(verts[i + 0] + originMapPosInternal.x, verts[i + 1] + originMapPosInternal.y, verts[i + 2] + originMapPosInternal.z);

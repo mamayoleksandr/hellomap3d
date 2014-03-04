@@ -86,14 +86,7 @@ public class OverlayLayer extends GeometryLayer {
 
     @Override
     public Envelope getDataExtent() {
-        MutableEnvelope envelope = new MutableEnvelope(super.getDataExtent());
-        synchronized (elements) {
-            for (Geometry element : elements) {
-                Envelope internalEnv = element.getInternalState().envelope;
-                envelope.add(projection.fromInternal(internalEnv));
-            }
-        }
-        return new Envelope(envelope);
+        return null;
     }
 
     @Override

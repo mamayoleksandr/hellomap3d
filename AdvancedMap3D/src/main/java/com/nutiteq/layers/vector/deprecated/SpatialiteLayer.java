@@ -286,6 +286,7 @@ public class SpatialiteLayer extends GeometryLayer {
                 numVert += ((Polygon) object).getVertexList().size();
             }
 
+            newObject.setId(object.getId());
             newObject.attachToLayer(this);
             newObject.setActiveStyle(zoom);
 
