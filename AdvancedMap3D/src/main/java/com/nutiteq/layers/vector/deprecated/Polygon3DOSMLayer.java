@@ -6,6 +6,8 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +17,8 @@ import java.util.Map.Entry;
 import android.net.ParseException;
 import android.net.Uri;
 
+import com.nutiteq.utils.LongHashMap;
+import com.nutiteq.utils.LongMap;
 import com.nutiteq.utils.Utils;
 import com.nutiteq.utils.WkbRead;
 import com.nutiteq.components.Envelope;
@@ -58,6 +62,10 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
 
     // map of symbolic color names used in OSM data to RGB values
     private static final HashMap<String, Integer> colorNames = new HashMap<String, Integer>();
+
+    // Caching
+    LongMap<Polygon> polygonMap = new LongHashMap<Polygon>();
+    LongMap<Polygon3D> polygon3DMap = new LongHashMap<Polygon3D>();
 
     static {
         colorNames.put("black", 0xFF000000);
@@ -134,21 +142,15 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
             return;
         }
 
-        // here we calculate bounding box, so it is in projection coordinates instead of internal 
-        // coordinates of the envelope
-        // TODO: use fromInternal(Envelope) here
-        MapPos bottomLeft = projection.fromInternal((float) envelope.getMinX(), (float) envelope.getMinY());
-        MapPos topRight = projection.fromInternal((float) envelope.getMaxX(), (float) envelope.getMaxY());
-
-        Envelope box = new Envelope(bottomLeft.x, topRight.x, bottomLeft.y, topRight.y);
-        executeVisibilityCalculationTask(new Load3DDataTask(box,zoom, maxObjects, baseUrl));
+        Envelope envLayer = new Envelope(projection.fromInternal(envelope));
+        executeVisibilityCalculationTask(new Load3DDataTask(envLayer, zoom, maxObjects, baseUrl));
     }
 
     /**
      * Helper method to load geometries from the server
      */
-    private List<Polygon> loadGeom(Envelope box, int maxObjects2, String baseUrl2) {
-        List<Polygon> objects = new LinkedList<Polygon>();
+    private LongMap<Polygon> loadGeom(Envelope box, LongMap<Polygon> elementMap, int maxObjects2, String baseUrl2) {
+        LongMap<Polygon> newElementMap = new LongHashMap<Polygon>();
         // URL request format: http://kaart.maakaart.ee/poiexport/buildings3d.php?bbox=xmin,ymin,xmax,ymax&output=wkb
         try {
             Uri.Builder uri = Uri.parse(baseUrl2).buildUpon();
@@ -164,7 +166,8 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
 
             for (int i = 0; i < n; i++) {
                 final Map<String, String> userData = new HashMap<String, String>();
-                userData.put("id", Long.toString(data.readInt()));
+                long id = data.readInt();
+                userData.put("id", Long.toString(id));
                 userData.put("name", data.readUTF());
                 userData.put("height", data.readUTF());
                 userData.put("type", data.readUTF());
@@ -190,15 +193,29 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
                 int len = data.readInt();
                 byte[] wkb = new byte[len];
                 data.read(wkb);
-                Geometry[] geoms = WkbRead.readWkb(new ByteArrayInputStream(wkb), userData);
-                for(Geometry geom : geoms){
-                    if(geom instanceof Polygon)
-                        objects.add((Polygon) geom);
-                    else
-                        Log.error("loaded object not a polygon");
+                
+                int count = 0;
+                for (int j = 0; true; j++) {
+                    long _id = id * 256 + j;
+                    Polygon poly = elementMap.get(_id);
+                    if (poly == null) {
+                        break;
+                    }
+                    newElementMap.put(_id, poly);
+                    count++;
+                }
+                if (count == 0) {
+                    Geometry[] geoms = WkbRead.readWkb(new ByteArrayInputStream(wkb), userData);
+                    for (int j = 0; j < geoms.length; j++) {
+                        Geometry geom = geoms[j];
+                        geom.setId(id * 256 + j);
+                        if (geom instanceof Polygon)
+                            newElementMap.put(geom.getId(), (Polygon) geom);
+                        else
+                            Log.error("loaded object not a polygon");
+                    }
                 }
             }
-
         }
         catch (IOException e) {
             Log.error("IO ERROR " + e.getMessage());
@@ -206,7 +223,7 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
             e.printStackTrace();
         }
 
-        return objects;
+        return newElementMap;
     }
 
     protected class Load3DDataTask implements Task {
@@ -224,11 +241,9 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
 
         @Override
         public void run() {
-
-            List<Polygon> polygons = loadGeom(envelope, maxObjects, serverUrl);
-            List<Polygon3D> newVisibleElementsList = convert3D(polygons, zoom);
-            setVisibleElements(newVisibleElementsList); 
-
+            polygonMap = loadGeom(envelope, polygonMap, maxObjects, serverUrl);
+            polygon3DMap = convert3D(polygonMap.values(), polygon3DMap, zoom);
+            setVisibleElements(new ArrayList<Polygon3D>(polygon3DMap.values())); 
         }
 
         @Override
@@ -241,11 +256,16 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
         }
     }
 
-    public List<Polygon3D> convert3D(List<Polygon> polygons, int zoom) {
+    public LongMap<Polygon3D> convert3D(Collection<Polygon> polygons, LongMap<Polygon3D> elementMap, int zoom) {
 
         long start = System.currentTimeMillis();
-        List<Polygon3D> newVisibleElementsList = new LinkedList<Polygon3D>();
+        LongMap<Polygon3D> newElementMap = new LongHashMap<Polygon3D>();
         for (Polygon geometry : polygons) {
+            Polygon3D oldPolygon = elementMap.get(geometry.getId()); 
+            if (oldPolygon != null) {
+                elementMap.put(oldPolygon.getId(), oldPolygon);
+                continue;
+            }
 
             // parse address and name for label
             final Map<String, String> userData = (Map<String, String>) geometry.userData;
@@ -297,12 +317,12 @@ public class Polygon3DOSMLayer extends Polygon3DLayer {
                 Log.error("Polygon3DOSMLayer: Failed to triangulate! " + e.getMessage());
                 continue;
             }
+            polygon3D.setId(geometry.getId());
             polygon3D.setActiveStyle(zoom);
-            newVisibleElementsList.add(polygon3D);
-
+            newElementMap.put(geometry.getId(), polygon3D);
         }
         Log.debug("Triangulation time: " + (System.currentTimeMillis() - start));
-        return newVisibleElementsList;
+        return newElementMap;
     }
 
     private DefaultLabel createLabel(Map<String, String> userData) {

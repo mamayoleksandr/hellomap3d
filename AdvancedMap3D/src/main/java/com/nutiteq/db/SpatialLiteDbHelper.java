@@ -493,7 +493,7 @@ public class SpatialLiteDbHelper {
                     String col = rowdata[1];
                     String type = rowdata[2].toUpperCase(Locale.US);
                     // add only known safe column types, skip geometries
-                    if(type.equals("INTEGER") || type.equals("TEXT") || type.equals("VARCHAR")|| type.equals("NUMBER")){
+                    if(type.toUpperCase().equals("INTEGER") || type.toUpperCase().equals("TEXT") || type.toUpperCase().equals("VARCHAR")|| type.toUpperCase().equals("NUMBER") || type.toUpperCase().equals("DOUBLE")){
                         columns.add(col); 
                     }
                     return false;
