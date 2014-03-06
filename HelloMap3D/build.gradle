@@ -57,5 +57,5 @@ tasks.withType(com.android.build.gradle.tasks.PackageApplication) { pkgTask ->
 
 dependencies {
 //    compile fileTree(dir: 'libs', includes: ['*.jar'])
-    compile "com.nutiteq:nutiteq-3d-sdk:2.3.0"
+    compile "com.nutiteq:nutiteq-3d-sdk:2.3.1"
 }
