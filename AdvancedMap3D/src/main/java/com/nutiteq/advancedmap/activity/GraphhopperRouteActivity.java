@@ -39,6 +39,7 @@ import com.nutiteq.projections.EPSG3857;
 import com.nutiteq.projections.Projection;
 import com.nutiteq.rasterlayers.RasterLayer;
 import com.nutiteq.services.routing.Route;
+import com.nutiteq.services.routing.RouteActivity;
 import com.nutiteq.style.LineStyle;
 import com.nutiteq.style.MarkerStyle;
 import com.nutiteq.style.StyleSet;

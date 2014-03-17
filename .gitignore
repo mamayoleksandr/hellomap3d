@@ -1,0 +1,6 @@
+.gradle
+.idea
+*.iml
+HelloMap3D/build
+import-summary.txt
+local.properties

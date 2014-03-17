@@ -1,8 +1,8 @@
 # Install dependency JARs
 
- You need dependent JAR files in the project. There are two ways to accomplish this:
+You need AdvancedLayers dependency to get this project to run. AdvancedLayers includes already Nutiteq SDK and layer-specific dependencies.
 
-If you use maven, then dependent libraries will be downloaded automatically from Nutiteq repository. Only if you do not use maven for some reason, just copy all *extlibs/* jar files to *libs* folder within the project
+Troubleshooting: https://github.com/nutiteq/hellomap3d/wiki/Get-advancedmap3d-to-start
 
 # Test datasets
 
