@@ -108,7 +108,7 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
         Bundle b = getIntent().getExtras();
         String mapFile = b.getString("selectedFile");
 
-        // open graph
+        // open graph from folder
         openGraph(mapFile.substring(0, mapFile.lastIndexOf("-gh/")));
         //openGraph("/sdcard/mapxt/graphhopper/new-york");
 
@@ -245,7 +245,9 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
             protected GHResponse doInBackground(Void... v) {
                 StopWatch sw = new StopWatch().start();
                 GHRequest req = new GHRequest(fromLat, fromLon, toLat, toLon)
-                .setAlgorithm("dijkstrabi");
+                .setAlgorithm("dijkstrabi")
+                .putHint("instructions", false)
+                .putHint("douglas.minprecision", 1);
                 GHResponse resp = gh.route(req);
                 time = sw.stop().getSeconds();
                 return resp;
@@ -298,7 +300,7 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
             protected Path doInBackground(Void... v) {
                 try {
                     GraphHopper tmpHopp = new GraphHopper().forMobile();
-                    tmpHopp.setCHShortcuts(true, true);
+                    tmpHopp.setCHShortcuts("fastest");
                     tmpHopp.load(graphFile);
                     Log.debug("found graph with " + tmpHopp.getGraph().getNodes() + " nodes");
                     gh = tmpHopp;
@@ -341,7 +343,7 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
                         // allow to select any directory
                         return true;
                     } else if (file.isFile()
-                            && (file.getName().endsWith(".ghz") || file.getName().endsWith(".map"))) {
+                            && file.getName().endsWith(".map")) {
                         // accept files with given extension
                         return true;
                     }
