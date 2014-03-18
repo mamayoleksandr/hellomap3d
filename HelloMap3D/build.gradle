@@ -6,7 +6,7 @@ buildscript {
 //			    }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.8.+'
+        classpath 'com.android.tools.build:gradle:0.9.+'
     }
 }
 
@@ -58,4 +58,5 @@ tasks.withType(com.android.build.gradle.tasks.PackageApplication) { pkgTask ->
 dependencies {
 //    compile fileTree(dir: 'libs', includes: ['*.jar'])
     compile "com.nutiteq:nutiteq-3d-sdk:2.3.1"
+
 }

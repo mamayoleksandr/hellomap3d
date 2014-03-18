@@ -6,7 +6,7 @@ buildscript {
 //			    }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.8.+'
+        classpath 'com.android.tools.build:gradle:0.9.+'
     }
 }
 
@@ -44,12 +44,14 @@ tasks.create(name: 'exportLibs', type: Copy) {
 
 tasks.withType(com.android.build.gradle.tasks.PackageApplication) { pkgTask ->
     pkgTask.jniFolders = new HashSet<File>()
-    pkgTask.jniFolders.add(new File(projectDir, 'libs'))
+    pkgTask.jniFolders.add(new File(projectDir, 'extlibs'))
 }
 
 dependencies {
 //    compile fileTree(dir: 'libs', includes: ['*.jar'])
-    compile "com.nutiteq:nutiteq-3d-sdk:2.3.1"
+//    compile "com.nutiteq:nutiteq-3d-sdk:2.3.1"
+    compile "com.nutiteq.advancedlayers:AdvancedLayers:1.0-SNAPSHOT"
+
     compile "com.google.code.gson:gson:2.2.3"
     compile "com.jhlabs:javaproj-noawt:1.0.7"
     compile "com.google.protobuf:protobuf-java:2.4.1"
