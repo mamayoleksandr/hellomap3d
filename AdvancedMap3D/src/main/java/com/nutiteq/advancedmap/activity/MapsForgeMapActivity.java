@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileFilter;
 
 import org.mapsforge.android.maps.mapgenerator.JobTheme;
+import org.mapsforge.map.reader.header.MapFileInfo;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -14,6 +15,7 @@ import android.widget.ZoomControls;
 
 import com.nutiteq.MapView;
 import com.nutiteq.advancedmap.R;
+import com.nutiteq.components.Bounds;
 import com.nutiteq.components.Components;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.components.Options;
@@ -83,11 +85,24 @@ public class MapsForgeMapActivity extends Activity implements FilePickerActivity
         mapView.getLayers().setBaseLayer(mapLayer);
 
         // set initial map view camera from database
-        MapPos mapCenter = new MapPos(dataSource.getMapDatabase().getMapFileInfo().mapCenter.getLongitude(), dataSource.getMapDatabase().getMapFileInfo().mapCenter.getLatitude(),dataSource.getMapDatabase().getMapFileInfo().startZoomLevel);
-        Log.debug("center: "+mapCenter);
-        mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
-        mapView.setZoom((float) mapCenter.z);
-
+        // set initial map view camera from database
+        MapFileInfo mapFileInfo = dataSource.getMapDatabase().getMapFileInfo();
+        if(mapFileInfo != null){
+            if(mapFileInfo.startPosition != null && mapFileInfo.startZoomLevel != null){
+                // start position is defined
+                MapPos mapCenter = new MapPos(mapFileInfo.startPosition.getLongitude(), mapFileInfo.startPosition.getLatitude(),mapFileInfo.startZoomLevel);
+                Log.debug("center: "+mapCenter);
+                mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
+                mapView.setZoom((float) mapCenter.z);
+            }else if(mapFileInfo.boundingBox != null){
+                // start position not defined, but boundingbox is defined
+                MapPos boxMin = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.getMinLongitude(), mapFileInfo.boundingBox.getMinLatitude());
+                MapPos boxMax = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.getMaxLongitude(), mapFileInfo.boundingBox.getMaxLatitude());
+                mapView.setBoundingBox(new Bounds(boxMin.x,boxMin.y,boxMax.x,boxMax.y), true);
+            }
+        }
+        // if no fileinfo, startPosition or boundingBox, then remain to default world view
+        
         // rotation - 0 = north-up
         mapView.setMapRotation(0f);
         // tilt means perspective view. Default is 90 degrees for "normal" 2D map view, minimum allowed is 30 degrees.
