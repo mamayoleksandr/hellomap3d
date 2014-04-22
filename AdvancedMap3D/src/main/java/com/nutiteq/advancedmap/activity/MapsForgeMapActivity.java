@@ -2,13 +2,14 @@ package com.nutiteq.advancedmap.activity;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 
 import org.mapsforge.core.model.Tag;
+import org.mapsforge.map.android.rendertheme.AssetsRenderTheme;
 import org.mapsforge.map.reader.MapDatabase;
 import org.mapsforge.map.reader.Way;
 import org.mapsforge.map.reader.header.FileOpenResult;
 import org.mapsforge.map.reader.header.MapFileInfo;
-import org.mapsforge.map.rendertheme.InternalRenderTheme;
 import org.mapsforge.map.rendertheme.XmlRenderTheme;
 
 import android.app.Activity;
@@ -93,76 +94,84 @@ public class MapsForgeMapActivity extends Activity implements FilePickerActivity
         Bundle b = getIntent().getExtras();
         String mapFilePath = b.getString("selectedFile");
 
-        XmlRenderTheme renderTheme = InternalRenderTheme.OSMARENDER;
-        
-        MapDatabase mapDatabase = new MapDatabase();
-        mapDatabase.closeFile();
-        File mapFile = new File("/" + mapFilePath);
-        FileOpenResult fileOpenResult = mapDatabase.openFile(mapFile);
-        if (fileOpenResult.isSuccess()) {
-            Log.debug("MapsforgeRasterDataSource: MapDatabase opened ok: " + mapFilePath);
-        }
-
-        MapsforgeRasterDataSource dataSource = new MapsforgeRasterDataSource(new EPSG3857(), 0, 20, mapFile, mapDatabase, renderTheme, this.getApplication());
-        RasterLayer mapLayer = new RasterLayer(dataSource, 1044);
-
-        mapView.getLayers().setBaseLayer(mapLayer);
-
-        // text layer, data from MapsForge, and use TiledVector to enable caching and faster queries
-
-        MapDatabase mapDatabase2 = new MapDatabase();
-        mapDatabase2.closeFile();
-        FileOpenResult fileOpenResult2 = mapDatabase2.openFile(mapFile);
-        if (fileOpenResult2.isSuccess()) {
-            Log.debug("MapsforgeRasterDataSource: MapDatabase opened ok: " + mapFilePath);
-        }
-        
-        MapsForgeTextVectorDataSource mfDataSource = new MapsForgeTextVectorDataSource(mapDatabase2) {
-            private StyleSet<TextStyle> styleSetRoad = new StyleSet<TextStyle>(
-                    TextStyle.builder().setAllowOverlap(false)
-                        .setOrientation(TextStyle.GROUND_ORIENTATION)
-                        .setAnchorY(TextStyle.CENTER)
-                        .setSize((int) (25 * dpi)).build());
-
-            private StyleSet<TextStyle> styleSetAmenity = new StyleSet<TextStyle>(
-                    TextStyle.builder().setAllowOverlap(false)
-                        .setOrientation(TextStyle.CAMERA_BILLBOARD_ORIENTATION)
-                        .setSize((int) (30 * dpi))
-                        .setColor(Color.argb(255, 100, 100, 100))
-                        .setPlacementPriority(5).build());
-            @Override
-            protected StyleSet<TextStyle> createFeatureStyleSet(Way way, int zoom, Tag type) {
-                if(type.value.equals("residential"))
-                    return styleSetRoad;
-                else
-                    return null;
+//        XmlRenderTheme renderTheme = InternalRenderTheme.OSMARENDER;
+        try {
+            XmlRenderTheme renderTheme = new AssetsRenderTheme(this, "",
+                        "renderthemes/assets_noname.xml");
+                    
+            MapDatabase mapDatabase = new MapDatabase();
+            mapDatabase.closeFile();
+            File mapFile = new File("/" + mapFilePath);
+            FileOpenResult fileOpenResult = mapDatabase.openFile(mapFile);
+            if (fileOpenResult.isSuccess()) {
+                Log.debug("MapsforgeRasterDataSource: MapDatabase opened ok: " + mapFilePath);
             }
-        };
-        
-        mfDataSource.setMaxElements(10);
-        
-        TileVectorDataSource<Text> textDataSource = new TileVectorDataSource<Text>(mfDataSource );
-        
-        TextLayer textLayer = new TextLayer(textDataSource);
-        textLayer.setTextFading(true);
-        mapView.getLayers().addLayer(textLayer);
-        
-        // set initial map view camera from database
-        MapFileInfo mapFileInfo = dataSource.getMapDatabase().getMapFileInfo();
-        if(mapFileInfo != null){
-            if(mapFileInfo.startPosition != null && mapFileInfo.startZoomLevel != null){
-                // start position is defined
-                MapPos mapCenter = new MapPos(mapFileInfo.startPosition.longitude, mapFileInfo.startPosition.latitude,mapFileInfo.startZoomLevel);
-                Log.debug("center: "+mapCenter);
-                mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
-                mapView.setZoom((float) mapCenter.z);
-            }else if(mapFileInfo.boundingBox != null){
-                // start position not defined, but boundingbox is defined
-                MapPos boxMin = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.minLongitude, mapFileInfo.boundingBox.minLatitude);
-                MapPos boxMax = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.maxLongitude, mapFileInfo.boundingBox.maxLatitude);
-                mapView.setBoundingBox(new Bounds(boxMin.x,boxMin.y,boxMax.x,boxMax.y), true);
+    
+            MapsforgeRasterDataSource dataSource = new MapsforgeRasterDataSource(new EPSG3857(), 0, 20, mapFile, mapDatabase, renderTheme, this.getApplication());
+            RasterLayer mapLayer = new RasterLayer(dataSource, 1044);
+            mapView.getLayers().setBaseLayer(mapLayer);
+            
+            // text layer, data from MapsForge, and use TiledVector to enable caching and faster queries
+
+            MapDatabase mapDatabase2 = new MapDatabase();
+            mapDatabase2.closeFile();
+            FileOpenResult fileOpenResult2 = mapDatabase2.openFile(mapFile);
+            if (fileOpenResult2.isSuccess()) {
+                Log.debug("MapsforgeRasterDataSource: MapDatabase opened ok: " + mapFilePath);
             }
+            
+            MapsForgeTextVectorDataSource mfDataSource = new MapsForgeTextVectorDataSource(mapDatabase2) {
+                private StyleSet<TextStyle> styleSetRoad = new StyleSet<TextStyle>(
+                        TextStyle.builder().setAllowOverlap(false)
+                            .setOrientation(TextStyle.GROUND_ORIENTATION)
+                            .setAnchorY(TextStyle.CENTER)
+                            .setSize((int) (25 * dpi)).build());
+
+                private StyleSet<TextStyle> styleSetAmenity = new StyleSet<TextStyle>(
+                        TextStyle.builder().setAllowOverlap(false)
+                            .setOrientation(TextStyle.CAMERA_BILLBOARD_ORIENTATION)
+                            .setSize((int) (30 * dpi))
+                            .setColor(Color.argb(255, 100, 100, 100))
+                            .setPlacementPriority(5).build());
+                @Override
+                protected StyleSet<TextStyle> createFeatureStyleSet(Way way, int zoom, Tag type) {
+                    if(type.value.equals("residential"))
+                        return styleSetRoad;
+                    else
+                        return null;
+                }
+            };
+            
+            mfDataSource.setMaxElements(10);
+            
+            TileVectorDataSource<Text> textDataSource = new TileVectorDataSource<Text>(mfDataSource );
+            
+            TextLayer textLayer = new TextLayer(textDataSource);
+            textLayer.setTextFading(true);
+            mapView.getLayers().addLayer(textLayer);
+            
+            // set initial map view camera from database
+            MapFileInfo mapFileInfo = dataSource.getMapDatabase().getMapFileInfo();
+            if(mapFileInfo != null){
+                if(mapFileInfo.startPosition != null && mapFileInfo.startZoomLevel != null){
+                    // start position is defined
+                    MapPos mapCenter = new MapPos(mapFileInfo.startPosition.longitude, mapFileInfo.startPosition.latitude,mapFileInfo.startZoomLevel);
+                    Log.debug("center: "+mapCenter);
+                    mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
+                    mapView.setZoom((float) mapCenter.z);
+                }else if(mapFileInfo.boundingBox != null){
+                    // start position not defined, but boundingbox is defined
+                    MapPos boxMin = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.minLongitude, mapFileInfo.boundingBox.minLatitude);
+                    MapPos boxMax = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.maxLongitude, mapFileInfo.boundingBox.maxLatitude);
+                    mapView.setBoundingBox(new Bounds(boxMin.x,boxMin.y,boxMax.x,boxMax.y), true);
+                }
+            }
+
+        } catch (IOException e) {
+            Log.error("Cannot read renderTheme from assets "+ e.toString());
+            e.printStackTrace();
         }
+
         // if no fileinfo, startPosition or boundingBox, then remain to default world view
         
         // rotation - 0 = north-up
@@ -193,8 +202,8 @@ public class MapsForgeMapActivity extends Activity implements FilePickerActivity
         mapView.getOptions().setClearColor(Color.WHITE);
 
         // configure texture caching - optional, suggested
-        mapView.getOptions().setTextureMemoryCacheSize(20 * 1024 * 1024);
-        mapView.getOptions().setCompressedMemoryCacheSize(8 * 1024 * 1024);
+        mapView.getOptions().setTextureMemoryCacheSize(40 * 1024 * 1024);
+        mapView.getOptions().setCompressedMemoryCacheSize(16 * 1024 * 1024);
 
         // define online map persistent caching - optional, suggested. Default - no caching
         //  mapView.getOptions().setPersistentCachePath(this.getDatabasePath("mapcache").getPath());
