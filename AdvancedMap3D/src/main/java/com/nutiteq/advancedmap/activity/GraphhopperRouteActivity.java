@@ -5,9 +5,11 @@ import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.mapsforge.android.maps.mapgenerator.JobTheme;
-import org.mapsforge.core.model.GeoPoint;
+import org.mapsforge.map.reader.MapDatabase;
+import org.mapsforge.map.reader.header.FileOpenResult;
 import org.mapsforge.map.reader.header.MapFileInfo;
+import org.mapsforge.map.rendertheme.InternalRenderTheme;
+import org.mapsforge.map.rendertheme.XmlRenderTheme;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
@@ -27,10 +29,10 @@ import com.graphhopper.util.StopWatch;
 import com.nutiteq.MapView;
 import com.nutiteq.advancedmap.R;
 import com.nutiteq.advancedmap.maplisteners.RouteMapEventListener;
+import com.nutiteq.components.Bounds;
 import com.nutiteq.components.Components;
 import com.nutiteq.components.MapPos;
 import com.nutiteq.components.Options;
-import com.nutiteq.datasources.raster.MapsforgeRasterDataSource;
 import com.nutiteq.filepicker.FilePickerActivity;
 import com.nutiteq.geometry.Line;
 import com.nutiteq.geometry.Marker;
@@ -48,6 +50,7 @@ import com.nutiteq.utils.UnscaledBitmapLoader;
 import com.nutiteq.vectorlayers.GeometryLayer;
 import com.nutiteq.vectorlayers.MarkerLayer;
 
+import com.nutiteq.datasources.raster.MapsforgeRasterDataSource;
 /**
  * 
  * 
@@ -83,7 +86,6 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
         // 1. Get the MapView from the Layout xml - mandatory
         mapView = (MapView) findViewById(R.id.mapView);
 
-
         // Optional, but very useful: restore map state during device rotation,
         // it is saved in onRetainNonConfigurationInstance() below
         Components retainObject = (Components) getLastNonConfigurationInstance();
@@ -103,41 +105,48 @@ public class GraphhopperRouteActivity extends Activity implements FilePickerActi
             mapView.getOptions().setMapListener(mapListener);
         }
 
-
         // read filename from extras
         Bundle b = getIntent().getExtras();
-        String mapFile = b.getString("selectedFile");
+        String mapFilePath = b.getString("selectedFile");
 
-        // open graph from folder
-        openGraph(mapFile.substring(0, mapFile.lastIndexOf("-gh/")));
-        //openGraph("/sdcard/mapxt/graphhopper/new-york");
+        //  use mapsforge as offline base map
+        XmlRenderTheme renderTheme = InternalRenderTheme.OSMARENDER;
+        MapDatabase mapDatabase = new MapDatabase();
+        mapDatabase.closeFile();
+        File mapFile = new File("/" + mapFilePath);
+        FileOpenResult fileOpenResult = mapDatabase.openFile(mapFile);
+        if (fileOpenResult.isSuccess()) {
+            Log.debug("MapsforgeRasterDataSource: MapDatabase opened ok: " + mapFilePath);
+        }
 
-        //  use mapsforge map as offline base
-        JobTheme renderTheme = MapsforgeRasterDataSource.InternalRenderTheme.OSMARENDER;
-        MapsforgeRasterDataSource dataSource = new MapsforgeRasterDataSource(new EPSG3857(), 0, 20, mapFile, renderTheme);
-        RasterLayer mapLayer = new RasterLayer(dataSource, 1044);
+        MapsforgeRasterDataSource dataSource =  new MapsforgeRasterDataSource(new EPSG3857(), 0, 20, mapFile, mapDatabase, renderTheme, this.getApplication());
+        RasterLayer mapLayer = new RasterLayer(dataSource, mapFile.hashCode());
 
         mapView.getLayers().setBaseLayer(mapLayer);
 
         // set initial map view camera from database
-        MapFileInfo fileInfo = dataSource.getMapDatabase().getMapFileInfo();
-        GeoPoint center = fileInfo.startPosition;
-        if(center != null){
-            MapPos mapCenter = new MapPos(center.getLongitude(), center.getLatitude(),0);
-            Log.debug("center: "+mapCenter);
-            mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
+        MapFileInfo mapFileInfo = dataSource.getMapDatabase().getMapFileInfo();
+        if(mapFileInfo != null){
+            if(mapFileInfo.startPosition != null && mapFileInfo.startZoomLevel != null){
+                // start position is defined
+                MapPos mapCenter = new MapPos(mapFileInfo.startPosition.longitude, mapFileInfo.startPosition.latitude,mapFileInfo.startZoomLevel);
+                Log.debug("center: "+mapCenter);
+                mapView.setFocusPoint(mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapCenter.x,mapCenter.y));
+                mapView.setZoom((float) mapCenter.z);
+            }else if(mapFileInfo.boundingBox != null){
+                // start position not defined, but boundingbox is defined
+                MapPos boxMin = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.minLongitude, mapFileInfo.boundingBox.minLatitude);
+                MapPos boxMax = mapView.getLayers().getBaseLayer().getProjection().fromWgs84(mapFileInfo.boundingBox.maxLongitude, mapFileInfo.boundingBox.maxLatitude);
+                mapView.setBoundingBox(new Bounds(boxMin.x,boxMin.y,boxMax.x,boxMax.y), true);
+            }
         }
-
-        if(fileInfo.startZoomLevel != null){
-            mapView.setZoom(fileInfo.startZoomLevel);
-        }else{
-            mapView.setZoom(10.0f);
-        }
+        
+        // open graph from folder. remove -gh and file name
+        openGraph(mapFilePath.replace("-gh", "").substring(0,mapFilePath.replace("-gh", "").lastIndexOf("/")));
 
         // routing layers
         routeLayer = new GeometryLayer(new EPSG3857());
         mapView.getLayers().addLayer(routeLayer);
-
 
         // create markers for start & end, and a layer for them
         Bitmap olMarker = UnscaledBitmapLoader.decodeResource(getResources(),
