@@ -7,7 +7,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry exported="true" kind="con" path="com.android.ide.eclipse.adt.DEPENDENCIES"/>
-	<classpathentry kind="src" output="bin/classes" path="src/main/java">
+	<classpathentry excluding="com/nutiteq/advancedmap/activity/MapsForgeTextVectorDataSource.java|com/nutiteq/advancedmap/activity/CloudMadeRouteActivity.java|com/nutiteq/advancedmap/activity/MapsforgeRasterDataSource.java" kind="src" output="bin/classes" path="src/main/java">
 		<attributes>
 			<attribute name="optional" value="true"/>
 			<attribute name="maven.pomderived" value="true"/>

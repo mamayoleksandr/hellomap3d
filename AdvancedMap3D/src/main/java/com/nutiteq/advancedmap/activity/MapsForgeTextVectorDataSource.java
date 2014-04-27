@@ -2,10 +2,8 @@ package com.nutiteq.advancedmap.activity;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.core.model.Tag;
@@ -14,7 +12,6 @@ import org.mapsforge.map.reader.MapDatabase;
 import org.mapsforge.map.reader.Way;
 import org.mapsforge.map.reader.header.MapFileInfo;
 
-import com.nutiteq.components.Bounds;
 import com.nutiteq.components.CullState;
 import com.nutiteq.components.Envelope;
 import com.nutiteq.components.MapPos;

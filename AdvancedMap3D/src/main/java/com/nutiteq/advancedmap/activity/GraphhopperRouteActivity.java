@@ -50,6 +50,7 @@ import com.nutiteq.utils.UnscaledBitmapLoader;
 import com.nutiteq.vectorlayers.GeometryLayer;
 import com.nutiteq.vectorlayers.MarkerLayer;
 
+import com.nutiteq.datasources.raster.MapsforgeRasterDataSource;
 /**
  * 
  * 
