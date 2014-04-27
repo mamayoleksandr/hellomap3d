@@ -38,12 +38,32 @@
 			<version>${platform.version}</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
+		<!-- dependency>
 			<groupId>com.nutiteq.advancedlayers</groupId>
 			<artifactId>AdvancedLayers</artifactId>
 			<version>1.0-SNAPSHOT</version>
 			<scope>compile</scope>
-		</dependency>
+		</dependency-->
+		<dependency>
+            <groupId>com.graphhopper</groupId>
+            <artifactId>graphhopper</artifactId>
+            <version>0.2</version>            
+            <type>jar</type>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>                    
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>                    
+                </exclusion>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>                    
+                </exclusion>
+            </exclusions>
+        </dependency>
 
 		<!-- Native (NDK) libraries built by Nutiteq -->
 		<dependency>

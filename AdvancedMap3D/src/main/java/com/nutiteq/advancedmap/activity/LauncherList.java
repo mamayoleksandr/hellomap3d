@@ -42,7 +42,7 @@ public class LauncherList extends ListActivity{
             {VectorFileMapActivity.class,FilePicker.class},
             {RasterFileMapActivity.class,FilePicker.class},
             {MapsForgeMapActivity.class,FilePicker.class},
-//            {GraphhopperRouteActivity.class,FilePicker.class},
+            {GraphhopperRouteActivity.class,FilePicker.class},
             {Offline3DMapActivity.class,FilePicker.class},
             {WmsMapActivity.class, null},
             {WfsMapActivity.class, null},
