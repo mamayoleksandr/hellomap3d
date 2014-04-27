@@ -1,17 +1,11 @@
 package com.nutiteq.hellomap;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.AssetManager;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -19,22 +13,25 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 
 import com.nutiteq.MapView;
-import com.nutiteq.components.Bounds;
 import com.nutiteq.components.Color;
 import com.nutiteq.components.Components;
-import com.nutiteq.components.Envelope;
+import com.nutiteq.components.MapPos;
 import com.nutiteq.components.Options;
+import com.nutiteq.geometry.Marker;
 import com.nutiteq.log.Log;
 import com.nutiteq.projections.EPSG3857;
 import com.nutiteq.projections.Projection;
 import com.nutiteq.rasterdatasources.HTTPRasterDataSource;
 import com.nutiteq.rasterdatasources.RasterDataSource;
 import com.nutiteq.rasterlayers.RasterLayer;
-import com.nutiteq.style.ModelStyle;
-import com.nutiteq.style.StyleSet;
+import com.nutiteq.style.MarkerStyle;
+import com.nutiteq.ui.DefaultLabel;
+import com.nutiteq.ui.Label;
 import com.nutiteq.utils.UnscaledBitmapLoader;
 import com.nutiteq.vectorlayers.GeometryLayer;
-import com.nutiteq.vectorlayers.NMLModelDbLayer;
+import com.nutiteq.vectorlayers.MarkerLayer;
+
+import java.util.List;
 
 /**
  * This is minimal example of Nutiteq 3D map app.
@@ -128,36 +125,10 @@ public class HelloMap3DActivity extends Activity {
         mapView.getOptions().setCompressedMemoryCacheSize(8 * 1024 * 1024);
         
         // define online map persistent caching - optional, suggested. Default - no caching
-        mapView.getOptions().setPersistentCachePath(this.getDatabasePath("mapcache").getPath());
+        //mapView.getOptions().setPersistentCachePath(this.getDatabasePath("mapcache").getPath());
         // set persistent raster cache limit to 100MB
-        mapView.getOptions().setPersistentCacheSize(100 * 1024 * 1024);
-        
-        // add NMLDB, copied from assets
-        copyAssets();
-        ModelStyle modelStyle = ModelStyle.builder().build();
-        StyleSet<ModelStyle> modelStyleSet = new StyleSet<ModelStyle>(null);
-        modelStyleSet.setZoomStyle(14, modelStyle);
-        
-        try {
-            NMLModelDbLayer modelLayer = new NMLModelDbLayer(mapView.getLayers().getBaseLayer().getProjection(),
-                    getExternalFilesDir(null).getAbsolutePath()+"/fraunhofer3d_android.nmldb", modelStyleSet);
-            modelLayer.setMemoryLimit(20*1024*1024);
-            mapView.getLayers().addLayer(modelLayer);
-    
-            // set initial map view camera from database
-            Envelope extent = modelLayer.getDataExtent();
-    
-            // or you can just set map view bounds directly 
-            mapView.setBoundingBox(new Bounds(extent.minX, extent.maxY, extent.maxX, extent.minY), false);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        //mapView.getOptions().setPersistentCacheSize(100 * 1024 * 1024);
 
-
-
-        /*
-        
         // 5. Add simple marker to map. 
         // define marker style (image, size, color)
         Bitmap pointMarker = UnscaledBitmapLoader.decodeResource(getResources(), R.drawable.olmarker);
@@ -178,7 +149,6 @@ public class HelloMap3DActivity extends Activity {
         // add event listener
         MyMapEventListener mapListener = new MyMapEventListener(this, mapView);
         mapView.getOptions().setMapListener(mapListener);
-        */
     }
 
     @Override
@@ -195,7 +165,6 @@ public class HelloMap3DActivity extends Activity {
         // 4. Start the map - mandatory.
         mapView.startMapping();
         
-        /*
         // Create layer for location circle
         locationLayer = new GeometryLayer(mapView.getLayers().getBaseProjection());
         mapView.getComponents().layers.addLayer(locationLayer);
@@ -212,12 +181,10 @@ public class HelloMap3DActivity extends Activity {
                 locationCircle.update(mapView.getZoom());
             }
         }, 0, 50);
-        */
     }
 
     @Override
     protected void onStop() {
-        /*
         // Stop animation
         locationTimer.cancel();
         
@@ -226,7 +193,7 @@ public class HelloMap3DActivity extends Activity {
 
         // remove GPS support, otherwise we will leak memory
         deinitGps();
-*/
+
         // Note: it is recommended to move startMapping() call to onStart method and implement onStop method (call MapView.stopMapping() from onStop). 
         mapView.stopMapping();
 
@@ -293,44 +260,4 @@ public class HelloMap3DActivity extends Activity {
         Log.debug("adjust DPI = "+dpi+" as zoom adjustment = "+adjustment);
         mapView.getOptions().setTileZoomLevelBias(adjustment / 2.0f);
     }
-    
-    private void copyAssets() {
-        AssetManager assetManager = getAssets();
-        String[] files = null;
-        try {
-            files = assetManager.list("");
-        } catch (IOException e) {
-            Log.error("Failed to get asset file list." + e.getLocalizedMessage());
-        }
-        for(String filename : files) {
-            InputStream in = null;
-            OutputStream out = null;
-            try {
-              in = assetManager.open(filename);
-              File outFile = new File(getExternalFilesDir(null), filename);
-              
-              if(!outFile.exists()){
-                  out = new FileOutputStream(outFile);
-                  copyFile(in, out);
-                  out.flush();
-                  out.close();
-                  out = null;
-              }
-              
-              in.close();
-              in = null;
-
-            } catch(IOException e) {
-                Log.error("Failed to copy asset file: " + filename + "\n" + e.getLocalizedMessage());
-            }       
-        }
-    }
-    private void copyFile(InputStream in, OutputStream out) throws IOException {
-        byte[] buffer = new byte[32 * 1024];
-        int read;
-        while((read = in.read(buffer)) != -1){
-          out.write(buffer, 0, read);
-        }
-    }
-    
 }
